@@ -1,0 +1,3632 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TravelLight API",
+    "description": "TravelLight 서비스의 API 문서",
+    "contact": {
+      "name": "TravelLight Team",
+      "email": "support@travellight.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "v1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Local Development Server"
+    }
+  ],
+  "tags": [
+    { "name": "HR 관리", "description": "채용 지원서 및 인재풀 관리 API" },
+    { "name": "리뷰 관리", "description": "리뷰 작성, 조회, 관리 API" },
+    { "name": "배달원 관리", "description": "배달원 관련 API" },
+    { "name": "Admin System", "description": "관리자 시스템 모니터링 API" },
+    { "name": "제휴점 관리", "description": "제휴점 신청 및 관리 API" },
+    { "name": "배달 관리", "description": "배달 신청 및 상태 관리 API" },
+    {
+      "name": "사용자 관리",
+      "description": "사용자 회원가입, 로그인, 정보 조회 및 비밀번호 변경 API"
+    }
+  ],
+  "paths": {
+    "/api/reviews/{reviewId}": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 상세 조회",
+        "description": "특정 리뷰의 상세 정보를 조회합니다.",
+        "operationId": "getReview",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 수정",
+        "description": "작성한 리뷰를 수정합니다.",
+        "operationId": "updateReview",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewUpdateRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "리뷰 수정 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "리뷰를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 삭제",
+        "description": "작성한 리뷰를 삭제합니다.",
+        "operationId": "deleteReview",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "리뷰 삭제 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "리뷰를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/status": {
+      "put": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 상태 변경",
+        "description": "관리자가 리뷰 상태를 변경합니다.",
+        "operationId": "updateReviewStatus",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "새 상태",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationNumber}/payment-id": {
+      "put": {
+        "tags": ["reservation-controller"],
+        "operationId": "updatePaymentId",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationNumber}/complete": {
+      "put": {
+        "tags": ["reservation-controller"],
+        "operationId": "completeReservation",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationNumber}/cancel": {
+      "put": {
+        "tags": ["reservation-controller"],
+        "operationId": "cancelReservationByNumber",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationId}/review": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getReviewByReservation",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["reservation-controller"],
+        "operationId": "updateReviewByReservation",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewUpdateRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["reservation-controller"],
+        "operationId": "deleteReviewByReservation",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/partnership/{id}/storage": {
+      "put": {
+        "tags": ["제휴점 관리"],
+        "operationId": "updateStorageCapacity",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "integer", "format": "int32" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/partnership/{id}/status": {
+      "put": {
+        "tags": ["제휴점 관리"],
+        "summary": "제휴점 상태 업데이트",
+        "description": "제휴점 신청의 상태를 승인 또는 거절로 업데이트합니다.",
+        "operationId": "updatePartnershipStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "제휴점 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" },
+                "description": "상태 업데이트 정보"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "상태 업데이트 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 상태 값",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/partnership/{id}/business-hours": {
+      "put": {
+        "tags": ["제휴점 관리"],
+        "summary": "제휴점 영업시간 업데이트",
+        "description": "제휴점의 영업시간을 업데이트합니다.",
+        "operationId": "updateBusinessHours",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "object" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/talent-pool/{talentId}/status": {
+      "put": {
+        "tags": ["HR 관리"],
+        "summary": "인재풀 상태 변경",
+        "description": "관리자가 인재풀 상태를 변경합니다.",
+        "operationId": "updateTalentStatus",
+        "parameters": [
+          {
+            "name": "talentId",
+            "in": "path",
+            "description": "인재풀 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StatusUpdateRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "상태 변경 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "인재풀 정보를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/applications/{applicationId}/status": {
+      "put": {
+        "tags": ["HR 관리"],
+        "summary": "지원서 상태 변경",
+        "description": "관리자가 지원서 상태를 변경합니다.",
+        "operationId": "updateApplicationStatus",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "description": "지원서 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StatusUpdateRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "상태 변경 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "지원서를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers/{id}/status": {
+      "put": {
+        "tags": ["배달원 관리"],
+        "summary": "배달원 상태 변경",
+        "description": "배달원 상태를 변경합니다.",
+        "operationId": "updateDriverStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달원 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverStatusUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers/{id}/location": {
+      "put": {
+        "tags": ["배달원 관리"],
+        "summary": "배달원 위치 업데이트",
+        "description": "배달원의 실시간 위치를 업데이트합니다.",
+        "operationId": "updateDriverLocation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달원 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DriverLocationUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries/{id}/status": {
+      "put": {
+        "tags": ["배달 관리"],
+        "summary": "배달 상태 변경",
+        "description": "배달 상태를 변경합니다.",
+        "operationId": "updateDeliveryStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "ASSIGNED",
+                "ACCEPTED",
+                "PICKED_UP",
+                "IN_PROGRESS",
+                "DELIVERED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries/{id}/assign": {
+      "put": {
+        "tags": ["배달 관리"],
+        "summary": "배달원 배정",
+        "description": "배달에 배달원을 배정합니다.",
+        "operationId": "assignDriver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "driverId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/EventStorage/{id}/status": {
+      "put": {
+        "tags": ["event-storage-controller"],
+        "operationId": "updateEventStorageStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{userId}/password": {
+      "post": {
+        "tags": ["사용자 관리"],
+        "summary": "비밀번호 변경",
+        "description": "사용자의 비밀번호를 변경합니다.",
+        "operationId": "changePassword",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "사용자 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PasswordChangeRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "비밀번호 변경 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 비밀번호",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "사용자를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/register": {
+      "post": {
+        "tags": ["사용자 관리"],
+        "summary": "회원가입",
+        "description": "새로운 사용자를 등록합니다.",
+        "operationId": "register",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "회원가입 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 존재하는 사용자",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/login": {
+      "post": {
+        "tags": ["사용자 관리"],
+        "summary": "로그인",
+        "description": "사용자 로그인을 처리합니다.",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "로그인 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 실패",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "사용자를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/upload-photo": {
+      "post": {
+        "tags": ["storage-controller"],
+        "operationId": "uploadPhoto",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PhotoUploadRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePhotoUploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/upload-photo-file": {
+      "post": {
+        "tags": ["storage-controller"],
+        "operationId": "uploadPhotoFile",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                },
+                "required": ["file"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePhotoUploadResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/check-out": {
+      "post": {
+        "tags": ["storage-controller"],
+        "operationId": "checkOut",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CheckOutRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/check-in": {
+      "post": {
+        "tags": ["storage-controller"],
+        "operationId": "checkIn",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "actualSmallBags",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "actualMediumBags",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "actualLargeBags",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 0 }
+          },
+          {
+            "name": "staffNotes",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "photos": {
+                    "type": "array",
+                    "items": { "type": "string", "format": "binary" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews": {
+      "post": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 작성",
+        "description": "예약에 대한 리뷰를 작성합니다.",
+        "operationId": "createReview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "리뷰 작성 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 필요",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/report": {
+      "post": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 신고",
+        "description": "부적절한 리뷰를 신고합니다.",
+        "operationId": "reportReview",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewReportRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseVoid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/helpful": {
+      "post": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 도움이 됨 토글",
+        "description": "리뷰에 도움이 됨을 추가하거나 취소합니다.",
+        "operationId": "toggleHelpful",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseBoolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/{reviewId}/admin-reply": {
+      "post": {
+        "tags": ["리뷰 관리"],
+        "summary": "관리자 답변 추가",
+        "description": "관리자가 리뷰에 답변을 추가합니다.",
+        "operationId": "addAdminReply",
+        "parameters": [
+          {
+            "name": "reviewId",
+            "in": "path",
+            "description": "리뷰 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdminReplyRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/photos/upload": {
+      "post": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 사진 업로드",
+        "description": "리뷰에 첨부할 사진을 업로드합니다.",
+        "operationId": "uploadReviewPhotos",
+        "parameters": [
+          {
+            "name": "files",
+            "in": "query",
+            "description": "업로드할 사진 파일들",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": { "type": "string", "format": "binary" }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListString"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations": {
+      "post": {
+        "tags": ["reservation-controller"],
+        "operationId": "createReservation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReservationDto" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ReservationDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/reviews": {
+      "post": {
+        "tags": ["reservation-controller"],
+        "operationId": "createReview_1",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment/{paymentId}/cancel": {
+      "post": {
+        "tags": ["payment-controller"],
+        "operationId": "cancelPayment",
+        "parameters": [
+          {
+            "name": "paymentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payment/portone/complete": {
+      "post": {
+        "tags": ["payment-controller"],
+        "operationId": "completePortonePayment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "string" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/partnership": {
+      "get": {
+        "tags": ["제휴점 관리"],
+        "summary": "모든 제휴점 조회",
+        "description": "등록된 모든 제휴점의 정보를 조회합니다.",
+        "operationId": "getAllPartnerships",
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["제휴점 관리"],
+        "summary": "제휴점 신청",
+        "description": "새로운 제휴점 신청을 등록합니다.",
+        "operationId": "createPartnership",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/PartnershipDto" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "신청 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "서버 오류",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/talent-pool": {
+      "post": {
+        "tags": ["HR 관리"],
+        "summary": "인재풀 등록",
+        "description": "인재풀에 등록합니다.",
+        "operationId": "submitTalentPoolApplication",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TalentPoolRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "인재풀 등록 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/applications": {
+      "post": {
+        "tags": ["HR 관리"],
+        "summary": "채용 지원서 제출",
+        "description": "새로운 채용 지원서를 제출합니다.",
+        "operationId": "submitJobApplication",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/JobApplicationRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "지원서 제출 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers/login": {
+      "post": {
+        "tags": ["배달원 관리"],
+        "summary": "배달원 로그인",
+        "description": "배달원 로그인을 수행합니다.",
+        "operationId": "login_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DriverLoginRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDriverResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries": {
+      "get": {
+        "tags": ["배달 관리"],
+        "summary": "배달 목록 조회",
+        "description": "모든 배달 목록을 조회합니다.",
+        "operationId": "getAllDeliveries",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListDeliveryResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["배달 관리"],
+        "summary": "배달 신청",
+        "description": "새로운 배달을 신청합니다.",
+        "operationId": "createDelivery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DeliveryRequest" }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "배달 신청 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "잘못된 요청",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "사용자 또는 예약을 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/system/health/refresh": {
+      "post": {
+        "tags": ["Admin System"],
+        "summary": "시스템 상태 강제 새로고침",
+        "description": "캐시를 무시하고 시스템 상태를 강제로 새로고침합니다",
+        "operationId": "refreshSystemHealth",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/EventStorage": {
+      "post": {
+        "tags": ["event-storage-controller"],
+        "operationId": "createEventStorageRequest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": { "type": "object" }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{userId}": {
+      "get": {
+        "tags": ["사용자 관리"],
+        "summary": "사용자 정보 조회",
+        "description": "사용자 ID로 사용자 정보를 조회합니다.",
+        "operationId": "getUserInfo",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "description": "사용자 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "사용자를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/test": {
+      "get": {
+        "tags": ["hello-controller"],
+        "operationId": "hello",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/api/storage/{id}": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "getById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/user/{userId}/history": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "getStorageHistoryByUserId",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/test": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "test",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/api/storage/store/current": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "getCurrentStoredItemsByStore",
+        "parameters": [
+          {
+            "name": "placeName",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "placeAddress",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStoreStorageStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/reservation/{reservationNumber}": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "getByReservationNumber",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/qr/{storageCode}": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "getByStorageCode",
+        "parameters": [
+          {
+            "name": "storageCode",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/qr-code/{storageCode}": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "generateQRCode",
+        "parameters": [
+          {
+            "name": "storageCode",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseString" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/storage/long-term/{days}": {
+      "get": {
+        "tags": ["storage-controller"],
+        "operationId": "getLongTermStoredItems",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int32" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListStorageItemSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/top-rated-places": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "상위 평점 제휴점 조회",
+        "description": "평점이 높은 상위 제휴점 목록을 조회합니다.",
+        "operationId": "getTopRatedPlaces",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "조회할 개수",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 10 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListPlaceReviewSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/place": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "제휴점 리뷰 목록 조회",
+        "description": "특정 제휴점의 리뷰 목록을 조회합니다.",
+        "operationId": "getPlaceReviews",
+        "parameters": [
+          {
+            "name": "placeName",
+            "in": "query",
+            "description": "제휴점명",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "placeAddress",
+            "in": "query",
+            "description": "제휴점 주소",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "sortBy",
+            "in": "query",
+            "description": "정렬 기준 (latest, rating)",
+            "required": false,
+            "schema": { "type": "string", "default": "latest" }
+          },
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Pageable" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/place/summary": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "제휴점 리뷰 요약",
+        "description": "특정 제휴점의 리뷰 요약 정보를 조회합니다.",
+        "operationId": "getPlaceReviewSummary",
+        "parameters": [
+          {
+            "name": "placeName",
+            "in": "query",
+            "description": "제휴점명",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "placeAddress",
+            "in": "query",
+            "description": "제휴점 주소",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseReviewSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/my": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "내 리뷰 목록 조회",
+        "description": "로그인한 사용자가 작성한 리뷰 목록을 조회합니다.",
+        "operationId": "getMyReviews",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Pageable" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/can-write/{reservationId}": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 작성 가능 여부 확인",
+        "description": "특정 예약에 대해 리뷰 작성이 가능한지 확인합니다.",
+        "operationId": "canWriteReview",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "description": "예약 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "사용자 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseBoolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/admin/recent": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "최근 리뷰 조회",
+        "description": "관리자가 최근 작성된 리뷰를 조회합니다.",
+        "operationId": "getRecentReviews",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Pageable" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponsePageReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/admin/high-reports": {
+      "get": {
+        "tags": ["리뷰 관리"],
+        "summary": "신고가 많은 리뷰 조회",
+        "description": "관리자가 신고가 많은 리뷰를 조회합니다.",
+        "operationId": "getReviewsWithHighReports",
+        "parameters": [
+          {
+            "name": "threshold",
+            "in": "query",
+            "description": "신고 횟수 임계값",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 3 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListReviewResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationNumber}/storage": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getStorageInfoByReservation",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseStorageItemResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationNumber}/storage-status": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getStorageStatus",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationId}/review-status": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getReviewStatus",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseMapStringObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{reservationId}/can-write-review": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "canWriteReview_1",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseBoolean" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/{id}": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getReservationById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ReservationDto" }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["reservation-controller"],
+        "operationId": "cancelReservation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/reservations/user/{userId}": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getUserReservations",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReservationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/test": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "test_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "string" } } }
+          }
+        }
+      }
+    },
+    "/api/reservations/store/{placeName}": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getReservationsByPlace",
+        "parameters": [
+          {
+            "name": "placeName",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReservationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/recent": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getRecentReservations",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer", "format": "int32", "default": 10 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/ReservationDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reservations/number/{reservationNumber}": {
+      "get": {
+        "tags": ["reservation-controller"],
+        "operationId": "getReservationByNumber",
+        "parameters": [
+          {
+            "name": "reservationNumber",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ReservationDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/partnership/{submissionId}": {
+      "get": {
+        "tags": ["제휴점 관리"],
+        "summary": "제휴점 신청 조회",
+        "description": "제출 ID로 제휴점 신청 정보를 조회합니다.",
+        "operationId": "getPartnershipBySubmissionId",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "in": "path",
+            "description": "제출 ID",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "신청 정보를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/partnership/{id}/current-usage": {
+      "get": {
+        "tags": ["제휴점 관리"],
+        "operationId": "getCurrentUsage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/partnership/storage-status": {
+      "get": {
+        "tags": ["제휴점 관리"],
+        "operationId": "getAllStorageStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/partnership/available-capacity": {
+      "get": {
+        "tags": ["제휴점 관리"],
+        "operationId": "getAvailableCapacity",
+        "parameters": [
+          {
+            "name": "businessName",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "address",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": { "*/*": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/talent-pool": {
+      "get": {
+        "tags": ["HR 관리"],
+        "summary": "모든 인재풀 조회",
+        "description": "관리자가 모든 인재풀을 조회합니다.",
+        "operationId": "getAllTalentPool",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Pageable" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/stats": {
+      "get": {
+        "tags": ["HR 관리"],
+        "summary": "HR 통계 조회",
+        "description": "관리자가 HR 관련 통계를 조회합니다.",
+        "operationId": "getHrStats",
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/applications": {
+      "get": {
+        "tags": ["HR 관리"],
+        "summary": "모든 채용 지원서 조회",
+        "description": "관리자가 모든 채용 지원서를 조회합니다.",
+        "operationId": "getAllJobApplications",
+        "parameters": [
+          {
+            "name": "pageable",
+            "in": "query",
+            "required": true,
+            "schema": { "$ref": "#/components/schemas/Pageable" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/files/**": {
+      "get": {
+        "tags": ["file-controller"],
+        "operationId": "getFile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": { "schema": { "type": "string", "format": "binary" } }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers": {
+      "get": {
+        "tags": ["배달원 관리"],
+        "summary": "모든 배달원 목록 조회",
+        "description": "모든 배달원 목록을 조회합니다. (관리자용)",
+        "operationId": "getAllDrivers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListDriverListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers/{id}/stats": {
+      "get": {
+        "tags": ["배달원 관리"],
+        "summary": "배달원 통계 조회",
+        "description": "배달원의 통계 정보를 조회합니다.",
+        "operationId": "getDriverStats",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달원 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDriverStatsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers/{id}/profile": {
+      "get": {
+        "tags": ["배달원 관리"],
+        "summary": "배달원 프로필 조회",
+        "description": "배달원 프로필 정보를 조회합니다.",
+        "operationId": "getDriverProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달원 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDriverResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/drivers/online": {
+      "get": {
+        "tags": ["배달원 관리"],
+        "summary": "온라인 배달원 목록 조회",
+        "description": "현재 온라인 상태인 배달원 목록을 조회합니다.",
+        "operationId": "getOnlineDrivers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListDriverListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries/{id}": {
+      "get": {
+        "tags": ["배달 관리"],
+        "summary": "배달 상세 조회",
+        "description": "배달 ID로 상세 정보를 조회합니다.",
+        "operationId": "getDeliveryById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "배달 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseDeliveryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries/reservation/{reservationId}": {
+      "get": {
+        "tags": ["배달 관리"],
+        "summary": "예약별 배달 정보 조회",
+        "description": "예약 ID로 배달 정보를 조회합니다.",
+        "operationId": "getDeliveriesByReservationId",
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "description": "예약 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "조회 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "예약을 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/deliveries/driver/{driverId}": {
+      "get": {
+        "tags": ["배달 관리"],
+        "summary": "배달원별 배달 목록",
+        "description": "특정 배달원의 배달 목록을 조회합니다.",
+        "operationId": "getDeliveriesByDriver",
+        "parameters": [
+          {
+            "name": "driverId",
+            "in": "path",
+            "description": "배달원 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListDeliveryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/system/health": {
+      "get": {
+        "tags": ["Admin System"],
+        "summary": "시스템 헬스체크",
+        "description": "AWS 서버 상태 및 시스템 메트릭을 조회합니다",
+        "operationId": "getSystemHealth",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/system/health/summary": {
+      "get": {
+        "tags": ["Admin System"],
+        "summary": "시스템 상태 요약",
+        "description": "간단한 시스템 상태 요약 정보를 조회합니다",
+        "operationId": "getHealthSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": { "type": "object" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/EventStorage": {
+      "get": {
+        "tags": ["event-storage-controller"],
+        "operationId": "getAllEventStorages",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/EventStorage/{submissionId}": {
+      "get": {
+        "tags": ["event-storage-controller"],
+        "operationId": "getEventStorageRequest",
+        "parameters": [
+          {
+            "name": "submissionId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/reviews/photos/{photoId}": {
+      "delete": {
+        "tags": ["리뷰 관리"],
+        "summary": "리뷰 사진 삭제",
+        "description": "리뷰 사진을 삭제합니다.",
+        "operationId": "deleteReviewPhoto",
+        "parameters": [
+          {
+            "name": "photoId",
+            "in": "path",
+            "description": "사진 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponseVoid" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/talent-pool/{talentId}": {
+      "delete": {
+        "tags": ["HR 관리"],
+        "summary": "인재풀 삭제",
+        "description": "관리자가 인재풀 정보를 삭제합니다.",
+        "operationId": "deleteTalentPoolEntry",
+        "parameters": [
+          {
+            "name": "talentId",
+            "in": "path",
+            "description": "인재풀 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "삭제 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "인재풀 정보를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/hr/admin/applications/{applicationId}": {
+      "delete": {
+        "tags": ["HR 관리"],
+        "summary": "지원서 삭제",
+        "description": "관리자가 지원서를 삭제합니다.",
+        "operationId": "deleteJobApplication",
+        "parameters": [
+          {
+            "name": "applicationId",
+            "in": "path",
+            "description": "지원서 ID",
+            "required": true,
+            "schema": { "type": "integer", "format": "int64" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "삭제 성공",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "권한 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "지원서를 찾을 수 없음",
+            "content": {
+              "*/*": {
+                "schema": { "$ref": "#/components/schemas/ApiResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ReviewUpdateRequest": {
+        "type": "object",
+        "description": "리뷰 수정 정보",
+        "properties": {
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "title": { "type": "string", "maxLength": 200, "minLength": 0 },
+          "content": { "type": "string", "maxLength": 2000, "minLength": 0 },
+          "keepPhotoIds": {
+            "type": "array",
+            "items": { "type": "integer", "format": "int64" }
+          },
+          "newPhotoFilenames": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "required": ["rating"]
+      },
+      "ApiResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "object" }
+        }
+      },
+      "ApiResponseReviewResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/ReviewResponse" }
+        }
+      },
+      "ReviewPhotoResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "filename": { "type": "string" },
+          "originalFilename": { "type": "string" },
+          "filePath": { "type": "string" },
+          "fileSize": { "type": "integer", "format": "int64" },
+          "mimeType": { "type": "string" },
+          "sortOrder": { "type": "integer", "format": "int32" },
+          "uploadedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ReviewResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "reservationId": { "type": "integer", "format": "int64" },
+          "reservationNumber": { "type": "string" },
+          "placeName": { "type": "string" },
+          "placeAddress": { "type": "string" },
+          "rating": { "type": "integer", "format": "int32" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["ACTIVE", "HIDDEN", "DELETED", "PENDING"]
+          },
+          "reportCount": { "type": "integer", "format": "int32" },
+          "helpfulCount": { "type": "integer", "format": "int32" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "user": { "$ref": "#/components/schemas/UserInfo" },
+          "photos": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ReviewPhotoResponse" }
+          },
+          "adminReply": { "type": "string" },
+          "adminUser": { "$ref": "#/components/schemas/UserInfo" },
+          "adminReplyAt": { "type": "string", "format": "date-time" },
+          "isHelpfulByCurrentUser": { "type": "boolean" },
+          "isReportedByCurrentUser": { "type": "boolean" },
+          "canEdit": { "type": "boolean" }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" }
+        }
+      },
+      "StatusUpdateRequest": {
+        "type": "object",
+        "description": "상태 정보",
+        "properties": { "status": { "type": "string" } }
+      },
+      "DriverStatusUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ONLINE", "OFFLINE", "BUSY", "BREAK"]
+          }
+        }
+      },
+      "ApiResponseString": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "string" }
+        }
+      },
+      "DriverLocationUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "latitude": { "type": "number", "format": "double" },
+          "longitude": { "type": "number", "format": "double" },
+          "speed": { "type": "number", "format": "double" },
+          "bearing": { "type": "number", "format": "double" },
+          "accuracy": { "type": "number", "format": "double" }
+        }
+      },
+      "PasswordChangeRequest": {
+        "type": "object",
+        "description": "비밀번호 변경 정보",
+        "properties": {
+          "currentPassword": { "type": "string" },
+          "newPassword": { "type": "string" }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "description": "회원가입 정보",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "password": { "type": "string" },
+          "role": {
+            "type": "string",
+            "enum": ["ADMIN", "USER", "PARTNER", "WAIT"]
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "로그인 정보",
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "PhotoUploadRequest": {
+        "type": "object",
+        "properties": {
+          "reservationNumber": { "type": "string" },
+          "fileName": { "type": "string" },
+          "base64Data": { "type": "string" }
+        }
+      },
+      "ApiResponsePhotoUploadResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/PhotoUploadResponse" }
+        }
+      },
+      "PhotoUploadResponse": {
+        "type": "object",
+        "properties": {
+          "fileName": { "type": "string" },
+          "filePath": { "type": "string" },
+          "thumbnailPath": { "type": "string" },
+          "fileSize": { "type": "integer", "format": "int64" }
+        }
+      },
+      "CheckOutRequest": {
+        "type": "object",
+        "properties": {
+          "storageCode": { "type": "string" },
+          "customerName": { "type": "string" },
+          "customerPhone": { "type": "string" },
+          "staffNotes": { "type": "string" }
+        }
+      },
+      "ApiResponseStorageItemResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/StorageItemResponse" }
+        }
+      },
+      "StorageItemResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "storageCode": { "type": "string" },
+          "reservationNumber": { "type": "string" },
+          "customerName": { "type": "string" },
+          "customerPhone": { "type": "string" },
+          "placeName": { "type": "string" },
+          "placeAddress": { "type": "string" },
+          "bagPhotos": { "type": "array", "items": { "type": "string" } },
+          "actualSmallBags": { "type": "integer", "format": "int32" },
+          "actualMediumBags": { "type": "integer", "format": "int32" },
+          "actualLargeBags": { "type": "integer", "format": "int32" },
+          "totalBags": { "type": "integer", "format": "int32" },
+          "checkInTime": { "type": "string", "format": "date-time" },
+          "checkOutTime": { "type": "string", "format": "date-time" },
+          "status": { "type": "string" },
+          "staffNotes": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "qrCodeDataUrl": { "type": "string" }
+        }
+      },
+      "ReviewRequest": {
+        "type": "object",
+        "description": "리뷰 작성 정보",
+        "properties": {
+          "reservationId": { "type": "integer", "format": "int64" },
+          "rating": {
+            "type": "integer",
+            "format": "int32",
+            "maximum": 5,
+            "minimum": 1
+          },
+          "title": { "type": "string", "maxLength": 200, "minLength": 0 },
+          "content": { "type": "string", "maxLength": 2000, "minLength": 0 },
+          "photoFilenames": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["rating", "reservationId"]
+      },
+      "ReviewReportRequest": {
+        "type": "object",
+        "description": "신고 정보",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "enum": [
+              "SPAM",
+              "INAPPROPRIATE_CONTENT",
+              "FAKE_REVIEW",
+              "PERSONAL_INFO",
+              "HATE_SPEECH",
+              "COPYRIGHT",
+              "OTHER"
+            ]
+          },
+          "description": { "type": "string", "maxLength": 500, "minLength": 0 }
+        },
+        "required": ["reason"]
+      },
+      "ApiResponseVoid": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "object" }
+        }
+      },
+      "ApiResponseBoolean": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "boolean" }
+        }
+      },
+      "AdminReplyRequest": {
+        "type": "object",
+        "description": "관리자 답변",
+        "properties": {
+          "adminReply": { "type": "string", "maxLength": 1000, "minLength": 0 }
+        }
+      },
+      "ApiResponseListString": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ReservationDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "userId": { "type": "integer", "format": "int64" },
+          "userEmail": { "type": "string" },
+          "userName": { "type": "string" },
+          "placeName": { "type": "string" },
+          "placeAddress": { "type": "string" },
+          "reservationNumber": { "type": "string" },
+          "storageDate": { "type": "string", "format": "date" },
+          "storageEndDate": { "type": "string", "format": "date" },
+          "storageStartTime": { "type": "string", "example": "14:30:00" },
+          "storageEndTime": { "type": "string", "example": "14:30:00" },
+          "smallBags": { "type": "integer", "format": "int32" },
+          "mediumBags": { "type": "integer", "format": "int32" },
+          "largeBags": { "type": "integer", "format": "int32" },
+          "totalPrice": { "type": "integer", "format": "int32" },
+          "storageType": { "type": "string" },
+          "status": { "type": "string" },
+          "paymentId": { "type": "string" }
+        }
+      },
+      "BusinessHourDto": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "open": { "type": "string" },
+          "close": { "type": "string" }
+        }
+      },
+      "PartnershipDto": {
+        "type": "object",
+        "description": "제휴점 신청 정보",
+        "properties": {
+          "businessName": { "type": "string" },
+          "ownerName": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "address": { "type": "string" },
+          "latitude": { "type": "number", "format": "double" },
+          "longitude": { "type": "number", "format": "double" },
+          "businessType": { "type": "string" },
+          "spaceSize": { "type": "string" },
+          "additionalInfo": { "type": "string" },
+          "agreeTerms": { "type": "boolean" },
+          "is24Hours": { "type": "boolean" },
+          "businessHours": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BusinessHourDto"
+            }
+          },
+          "smallBagsAvailable": { "type": "integer", "format": "int32" },
+          "mediumBagsAvailable": { "type": "integer", "format": "int32" },
+          "largeBagsAvailable": { "type": "integer", "format": "int32" }
+        }
+      },
+      "TalentPoolRequest": {
+        "type": "object",
+        "description": "인재풀 등록 정보",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "field": { "type": "string" },
+          "experience": { "type": "string" },
+          "introduction": { "type": "string" }
+        }
+      },
+      "JobApplicationRequest": {
+        "type": "object",
+        "description": "채용 지원서 정보",
+        "properties": {
+          "positionTitle": { "type": "string" },
+          "department": { "type": "string" },
+          "applicantName": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "coverLetter": { "type": "string" }
+        }
+      },
+      "DriverLoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "ApiResponseDriverResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/DriverResponse" }
+        }
+      },
+      "DriverResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "userId": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "licenseNumber": { "type": "string" },
+          "vehicleType": { "type": "string" },
+          "vehicleNumber": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["ONLINE", "OFFLINE", "BUSY", "BREAK"]
+          },
+          "currentLatitude": { "type": "number", "format": "double" },
+          "currentLongitude": { "type": "number", "format": "double" },
+          "phoneNumber": { "type": "string" },
+          "lastLocationUpdate": { "type": "string", "format": "date-time" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DeliveryRequest": {
+        "type": "object",
+        "description": "배달 신청 정보",
+        "properties": {
+          "userId": { "type": "integer", "format": "int64" },
+          "reservationId": { "type": "integer", "format": "int64" },
+          "pickupAddress": { "type": "string" },
+          "deliveryAddress": { "type": "string" },
+          "itemDescription": { "type": "string" },
+          "weight": { "type": "number", "format": "double" }
+        }
+      },
+      "ApiResponseListStorageItemResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/StorageItemResponse" }
+          }
+        }
+      },
+      "ApiResponseStoreStorageStatus": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/StoreStorageStatus" }
+        }
+      },
+      "StorageItemSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "storageCode": { "type": "string" },
+          "customerName": { "type": "string" },
+          "placeName": { "type": "string" },
+          "totalBags": { "type": "integer", "format": "int32" },
+          "checkInTime": { "type": "string", "format": "date-time" },
+          "status": { "type": "string" },
+          "thumbnailPhotos": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "StoreStorageStatus": {
+        "type": "object",
+        "properties": {
+          "placeName": { "type": "string" },
+          "placeAddress": { "type": "string" },
+          "currentStoredItems": { "type": "integer", "format": "int32" },
+          "totalCapacity": { "type": "integer", "format": "int32" },
+          "storedItems": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/StorageItemSummary" }
+          }
+        }
+      },
+      "ApiResponseListStorageItemSummary": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/StorageItemSummary" }
+          }
+        }
+      },
+      "ApiResponseListPlaceReviewSummary": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PlaceReviewSummary" }
+          }
+        }
+      },
+      "PlaceReviewSummary": {
+        "type": "object",
+        "properties": {
+          "placeName": { "type": "string" },
+          "placeAddress": { "type": "string" },
+          "averageRating": { "type": "number", "format": "double" },
+          "reviewCount": { "type": "integer", "format": "int64" },
+          "recommendationScore": { "type": "number", "format": "double" }
+        }
+      },
+      "Pageable": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer", "format": "int32", "minimum": 0 },
+          "size": { "type": "integer", "format": "int32", "minimum": 1 },
+          "sort": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "ApiResponsePageReviewResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/PageReviewResponse" }
+        }
+      },
+      "PageReviewResponse": {
+        "type": "object",
+        "properties": {
+          "totalElements": { "type": "integer", "format": "int64" },
+          "totalPages": { "type": "integer", "format": "int32" },
+          "size": { "type": "integer", "format": "int32" },
+          "content": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ReviewResponse" }
+          },
+          "number": { "type": "integer", "format": "int32" },
+          "sort": { "$ref": "#/components/schemas/SortObject" },
+          "first": { "type": "boolean" },
+          "last": { "type": "boolean" },
+          "numberOfElements": { "type": "integer", "format": "int32" },
+          "pageable": { "$ref": "#/components/schemas/PageableObject" },
+          "empty": { "type": "boolean" }
+        }
+      },
+      "PageableObject": {
+        "type": "object",
+        "properties": {
+          "offset": { "type": "integer", "format": "int64" },
+          "sort": { "$ref": "#/components/schemas/SortObject" },
+          "paged": { "type": "boolean" },
+          "pageNumber": { "type": "integer", "format": "int32" },
+          "pageSize": { "type": "integer", "format": "int32" },
+          "unpaged": { "type": "boolean" }
+        }
+      },
+      "SortObject": {
+        "type": "object",
+        "properties": {
+          "empty": { "type": "boolean" },
+          "sorted": { "type": "boolean" },
+          "unsorted": { "type": "boolean" }
+        }
+      },
+      "ApiResponseReviewSummary": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/ReviewSummary" }
+        }
+      },
+      "RatingDistribution": {
+        "type": "object",
+        "properties": {
+          "rating5Count": { "type": "integer", "format": "int64" },
+          "rating4Count": { "type": "integer", "format": "int64" },
+          "rating3Count": { "type": "integer", "format": "int64" },
+          "rating2Count": { "type": "integer", "format": "int64" },
+          "rating1Count": { "type": "integer", "format": "int64" }
+        }
+      },
+      "ReviewSummary": {
+        "type": "object",
+        "properties": {
+          "placeName": { "type": "string" },
+          "placeAddress": { "type": "string" },
+          "averageRating": { "type": "number", "format": "double" },
+          "totalReviews": { "type": "integer", "format": "int64" },
+          "ratingDistribution": {
+            "$ref": "#/components/schemas/RatingDistribution"
+          }
+        }
+      },
+      "ApiResponseListReviewResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ReviewResponse" }
+          }
+        }
+      },
+      "ApiResponseMapStringObject": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "object",
+            "additionalProperties": { "type": "object" }
+          }
+        }
+      },
+      "ApiResponseListDriverListResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DriverListResponse" }
+          }
+        }
+      },
+      "DriverListResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string" },
+          "vehicleType": { "type": "string" },
+          "vehicleNumber": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["ONLINE", "OFFLINE", "BUSY", "BREAK"]
+          },
+          "currentLatitude": { "type": "number", "format": "double" },
+          "currentLongitude": { "type": "number", "format": "double" },
+          "activeDeliveries": { "type": "integer", "format": "int32" },
+          "lastLocationUpdate": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ApiResponseDriverStatsResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/DriverStatsResponse" }
+        }
+      },
+      "DriverStatsResponse": {
+        "type": "object",
+        "properties": {
+          "driverId": { "type": "integer", "format": "int64" },
+          "driverName": { "type": "string" },
+          "totalDeliveries": { "type": "integer", "format": "int32" },
+          "completedDeliveries": { "type": "integer", "format": "int32" },
+          "todayDeliveries": { "type": "integer", "format": "int32" },
+          "totalEarnings": { "type": "number", "format": "double" },
+          "todayEarnings": { "type": "number", "format": "double" },
+          "averageRating": { "type": "number", "format": "double" },
+          "onlineHours": { "type": "integer", "format": "int32" },
+          "lastActiveAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ApiResponseListDeliveryResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DeliveryResponse" }
+          }
+        }
+      },
+      "DeliveryResponse": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "userId": { "type": "integer", "format": "int64" },
+          "reservationId": { "type": "integer", "format": "int64" },
+          "pickupAddress": { "type": "string" },
+          "deliveryAddress": { "type": "string" },
+          "itemDescription": { "type": "string" },
+          "weight": { "type": "number", "format": "double" },
+          "requestedAt": { "type": "string", "format": "date-time" },
+          "status": { "type": "string" },
+          "trackingNumber": { "type": "string" },
+          "estimatedDeliveryTime": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ApiResponseDeliveryResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "message": { "type": "string" },
+          "data": { "$ref": "#/components/schemas/DeliveryResponse" }
+        }
+      }
+    }
+  }
+}
