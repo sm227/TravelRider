@@ -1,32 +1,43 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useDelivery } from '@/contexts/DeliveryContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { DeliveryResponse } from '@/services/deliveryService';
 
 export default function DeliveryProgressScreen() {
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
+  const { currentDelivery, updateDeliveryStatus } = useDelivery();
+  const [currentStep, setCurrentStep] = useState<number>(1); // 1: 픽업 진행, 2: 배송 진행
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const [currentDelivery, setCurrentDelivery] = useState({
-    id: '1',
-    customerName: '김고객',
-    customerPhone: '010-1234-5678',
-    pickupAddress: '서울시 강남구 테헤란로 123, 1층 카페',
-    deliveryAddress: '서울시 서초구 반포대로 456, 101동 503호',
-    status: 'in_progress',
-    priority: 'high',
-    pickupTime: '14:30',
-    estimatedDeliveryTime: '15:00',
-    items: [
-      { name: '여행가방 대형', count: 1 },
-      { name: '백팩', count: 2 }
-    ]
-  });
+  // 배달 상태에 따라 현재 단계 결정
+  useEffect(() => {
+    if (currentDelivery) {
+      switch (currentDelivery.status) {
+        case 'ACCEPTED':
+          setCurrentStep(1);
+          break;
+        case 'PICKED_UP':
+        case 'IN_PROGRESS':
+          setCurrentStep(2);
+          break;
+        case 'DELIVERED':
+          setCurrentStep(0); // 완료
+          break;
+        default:
+          setCurrentStep(1);
+      }
+    }
+  }, [currentDelivery]);
 
-  const [currentStep, setCurrentStep] = useState(1); // 1: 픽업 진행, 2: 배송 진행
+  const handlePickupComplete = async () => {
+    if (!currentDelivery) return;
 
-  const handlePickupComplete = () => {
     Alert.alert(
       '픽업 완료',
       '짐을 픽업했습니다. 배송을 시작하시겠습니까?',
@@ -34,29 +45,61 @@ export default function DeliveryProgressScreen() {
         { text: '취소', style: 'cancel' },
         {
           text: '배송 시작',
-          onPress: () => {
-            setCurrentStep(2);
-            setCurrentDelivery(prev => ({ ...prev, status: 'delivering' }));
+          onPress: async () => {
+            setIsUpdating(true);
+            try {
+              const success = await updateDeliveryStatus(currentDelivery.id, 'PICKED_UP');
+              if (success) {
+                setCurrentStep(2);
+                Alert.alert('배송 시작', '배송지로 이동해주세요.');
+              } else {
+                Alert.alert('오류', '상태 업데이트에 실패했습니다.');
+              }
+            } catch (error) {
+              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+            } finally {
+              setIsUpdating(false);
+            }
           }
         }
       ]
     );
   };
 
-  const handleDeliveryComplete = () => {
+  const handleDeliveryComplete = async () => {
+    if (!currentDelivery) return;
+
     Alert.alert(
       '배달 완료',
       '배달 완료 사진을 촬영하시겠습니까?',
       [
-        { text: '나중에', onPress: () => setCurrentStep(0) },
+        {
+          text: '나중에',
+          onPress: async () => {
+            setIsUpdating(true);
+            try {
+              const success = await updateDeliveryStatus(currentDelivery.id, 'DELIVERED');
+              if (success) {
+                setCurrentStep(0);
+                Alert.alert('배달 완료', '배달이 완료되었습니다!');
+              } else {
+                Alert.alert('오류', '상태 업데이트에 실패했습니다.');
+              }
+            } catch (error) {
+              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+            } finally {
+              setIsUpdating(false);
+            }
+          }
+        },
         {
           text: '사진 촬영',
           onPress: () => {
             router.push({
               pathname: '/camera/delivery-photo',
               params: {
-                deliveryId: currentDelivery.id,
-                customerName: currentDelivery.customerName,
+                deliveryId: currentDelivery.id.toString(),
+                customerName: `고객 #${currentDelivery.id}`,
                 address: currentDelivery.deliveryAddress
               }
             });
@@ -66,10 +109,59 @@ export default function DeliveryProgressScreen() {
     );
   };
 
-  const handleCall = (phone: string) => {
-    Alert.alert('전화 걸기', `${phone}로 전화를 걸겠습니까?`);
+  const handleCall = (phone?: string) => {
+    if (phone) {
+      Alert.alert('전화 걸기', `${phone}로 전화를 걸겠습니까?`);
+    } else {
+      Alert.alert('전화번호', '고객 전화번호가 없습니다.');
+    }
   };
 
+  const getCustomerName = (delivery: DeliveryResponse): string => {
+    return `고객 #${delivery.id}`;
+  };
+
+  const getCustomerPhone = (delivery: DeliveryResponse): string => {
+    // API에서 고객 전화번호를 제공하지 않는 경우 임시 번호
+    return '010-0000-0000';
+  };
+
+  const getEstimatedTime = (delivery: DeliveryResponse): string => {
+    if (delivery.estimatedDeliveryTime) {
+      const date = new Date(delivery.estimatedDeliveryTime);
+      return date.toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    }
+    return '--:--';
+  };
+
+  const getRequestedTime = (delivery: DeliveryResponse): string => {
+    const date = new Date(delivery.requestedAt);
+    return date.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
+  // 로그인되지 않은 경우
+  if (!user) {
+    return (
+      <ThemedView style={[styles.emptyContainer, { paddingTop: insets.top }]}>
+        <ThemedText type="title" style={styles.emptyTitle}>
+          로그인이 필요합니다
+        </ThemedText>
+        <Text style={styles.emptySubtitle}>
+          로그인 후 배달을 진행할 수 있습니다
+        </Text>
+      </ThemedView>
+    );
+  }
+
+  // 진행 중인 배달이 없는 경우
   if (currentStep === 0 || !currentDelivery) {
     return (
       <ThemedView style={[styles.emptyContainer, { paddingTop: insets.top }]}>
@@ -79,6 +171,22 @@ export default function DeliveryProgressScreen() {
         <Text style={styles.emptySubtitle}>
           배달 목록에서 배달을 시작해주세요
         </Text>
+        <TouchableOpacity
+          style={styles.goToListButton}
+          onPress={() => router.push('/')}
+        >
+          <Text style={styles.goToListButtonText}>배달 목록 보기</Text>
+        </TouchableOpacity>
+      </ThemedView>
+    );
+  }
+
+  // 로딩 중인 경우
+  if (isUpdating) {
+    return (
+      <ThemedView style={[styles.emptyContainer, { paddingTop: insets.top }]}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+        <Text style={styles.loadingText}>상태 업데이트 중...</Text>
       </ThemedView>
     );
   }
@@ -107,10 +215,10 @@ export default function DeliveryProgressScreen() {
         <View style={styles.infoCard}>
           <Text style={styles.cardTitle}>고객 정보</Text>
           <View style={styles.customerInfo}>
-            <Text style={styles.customerName}>{currentDelivery.customerName}</Text>
+            <Text style={styles.customerName}>{getCustomerName(currentDelivery)}</Text>
             <TouchableOpacity
               style={styles.callButton}
-              onPress={() => handleCall(currentDelivery.customerPhone)}
+              onPress={() => handleCall(getCustomerPhone(currentDelivery))}
             >
               <Text style={styles.callButtonText}>📞 전화</Text>
             </TouchableOpacity>
@@ -133,24 +241,32 @@ export default function DeliveryProgressScreen() {
         {/* Items */}
         <View style={styles.infoCard}>
           <Text style={styles.cardTitle}>배송 물품</Text>
-          {currentDelivery.items.map((item, index) => (
-            <View key={index} style={styles.itemRow}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <Text style={styles.itemCount}>{item.count}개</Text>
-            </View>
-          ))}
+          <View style={styles.itemRow}>
+            <Text style={styles.itemName}>{currentDelivery.itemDescription}</Text>
+            <Text style={styles.itemCount}>{currentDelivery.weight}kg</Text>
+          </View>
+          <View style={styles.itemRow}>
+            <Text style={styles.itemName}>배송 번호</Text>
+            <Text style={styles.itemCount}>#{currentDelivery.trackingNumber || currentDelivery.id}</Text>
+          </View>
         </View>
 
         {/* Time Info */}
         <View style={styles.infoCard}>
           <Text style={styles.cardTitle}>시간 정보</Text>
           <View style={styles.timeRow}>
-            <Text style={styles.timeLabel}>픽업 시간:</Text>
-            <Text style={styles.timeValue}>{currentDelivery.pickupTime}</Text>
+            <Text style={styles.timeLabel}>신청 시간:</Text>
+            <Text style={styles.timeValue}>{getRequestedTime(currentDelivery)}</Text>
           </View>
           <View style={styles.timeRow}>
             <Text style={styles.timeLabel}>예상 배송:</Text>
-            <Text style={styles.timeValue}>{currentDelivery.estimatedDeliveryTime}</Text>
+            <Text style={styles.timeValue}>{getEstimatedTime(currentDelivery)}</Text>
+          </View>
+          <View style={styles.timeRow}>
+            <Text style={styles.timeLabel}>현재 상태:</Text>
+            <Text style={styles.timeValue}>
+              {currentStep === 1 ? '픽업 진행중' : '배송 진행중'}
+            </Text>
           </View>
         </View>
 
@@ -345,5 +461,23 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 16,
     fontWeight: '500',
+  },
+  goToListButton: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  goToListButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginTop: 16,
   },
 });

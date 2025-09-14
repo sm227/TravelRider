@@ -1,13 +1,26 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Platform } from 'react-native';
+import { driverService, DriverResponse } from '@/services/driverService';
+import { locationService } from '@/services/locationService';
 
 export interface User {
   id: number;
+  userId: number;
   name: string;
   email: string;
   phone?: string;
   role: 'driver' | 'admin';
+  licenseNumber?: string;
+  vehicleType?: string;
+  vehicleNumber?: string;
+  status?: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK';
+  currentLatitude?: number;
+  currentLongitude?: number;
+  phoneNumber?: string;
+  lastLocationUpdate?: string;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -16,11 +29,27 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
+  updateDriverStatus: (status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK') => Promise<boolean>;
+  refreshProfile: () => Promise<boolean>;
+  startLocationTracking: () => Promise<boolean>;
+  stopLocationTracking: () => Promise<void>;
+  isLocationTrackingActive: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE_URL = 'http://localhost:8080/api';
+// 플랫폼별 API URL 설정
+const getApiBaseUrl = () => {
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:8080/api'; // Android 에뮬레이터
+  } else if (Platform.OS === 'ios') {
+    return 'http://192.168.55.90:8080/api'; // iOS - 컴퓨터의 실제 IP
+  } else {
+    return 'http://localhost:8080/api'; // 웹
+  }
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -42,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Set default axios header
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+        // 앱이 다시 시작될 때 위치 추적 복원
+        await locationService.restoreLocationTracking();
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -65,23 +97,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
-      // 데모 계정 로그인 처리
+      // 데모 계정 로그인 처리 (개발/테스트용)
       if (email === 'driver@travelrider.com' && password === 'password123') {
         const mockUser: User = {
           id: 1,
+          userId: 1,
           name: '홍배달',
           email: 'driver@travelrider.com',
           phone: '010-9876-5432',
-          role: 'driver'
+          role: 'driver',
+          status: 'OFFLINE',
+          vehicleType: '오토바이',
+          vehicleNumber: '서울12가3456'
         };
 
         const mockToken = 'demo_token_' + Date.now();
 
-        // Save to AsyncStorage
         await AsyncStorage.setItem('authToken', mockToken);
         await AsyncStorage.setItem('userData', JSON.stringify(mockUser));
-
-        // Set axios header
         axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
 
         setUser(mockUser);
@@ -92,39 +125,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (email === 'kakao@demo.com' && password === 'kakao_demo') {
         const mockUser: User = {
           id: 2,
+          userId: 2,
           name: '김카카오',
           email: 'kakao@demo.com',
           phone: '010-1234-5678',
-          role: 'driver'
+          role: 'driver',
+          status: 'OFFLINE',
+          vehicleType: '자전거',
+          vehicleNumber: '서울98나1234'
         };
 
         const mockToken = 'kakao_demo_token_' + Date.now();
 
-        // Save to AsyncStorage
         await AsyncStorage.setItem('authToken', mockToken);
         await AsyncStorage.setItem('userData', JSON.stringify(mockUser));
-
-        // Set axios header
         axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
 
         setUser(mockUser);
         return true;
       }
 
-      // 실제 API 호출
-      const response = await axios.post(`${API_BASE_URL}/users/login`, {
-        email,
-        password
-      });
+      // 실제 배달원 로그인 API 호출
+      const response = await driverService.login({ email, password });
 
-      if (response.data && response.data.success) {
-        const { token, user: userData } = response.data.data;
+      if (response.success && response.data) {
+        const driverData = response.data;
 
-        // Save to AsyncStorage
+        // DriverResponse를 User 형태로 매핑
+        const userData: User = {
+          id: driverData.id,
+          userId: driverData.userId,
+          name: driverData.name,
+          email: driverData.email,
+          phone: driverData.phoneNumber,
+          role: 'driver',
+          licenseNumber: driverData.licenseNumber,
+          vehicleType: driverData.vehicleType,
+          vehicleNumber: driverData.vehicleNumber,
+          status: driverData.status,
+          currentLatitude: driverData.currentLatitude,
+          currentLongitude: driverData.currentLongitude,
+          phoneNumber: driverData.phoneNumber,
+          lastLocationUpdate: driverData.lastLocationUpdate,
+          createdAt: driverData.createdAt
+        };
+
+        // JWT 토큰은 응답에서 받아야 함 (API 스펙에 따라 수정 필요)
+        const token = response.data.token || `driver_token_${driverData.id}_${Date.now()}`;
+
         await AsyncStorage.setItem('authToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(userData));
-
-        // Set axios header
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
         setUser(userData);
@@ -144,6 +194,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async (): Promise<void> => {
     try {
       setIsLoading(true);
+
+      // 로그아웃 시 위치 추적 중지
+      await locationService.stopLocationTracking();
+
       await clearAuthData();
     } catch (error) {
       console.error('Logout error:', error);
@@ -158,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setIsLoading(true);
 
-      const response = await axios.put(`${API_BASE_URL}/users/${user.id}`, userData);
+      const response = await axios.put(`${API_BASE_URL}/users/${user.userId}`, userData);
 
       if (response.data && response.data.success) {
         const updatedUser = { ...user, ...userData };
@@ -176,12 +230,100 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateDriverStatus = async (status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK'): Promise<boolean> => {
+    try {
+      if (!user) return false;
+
+      setIsLoading(true);
+
+      const response = await driverService.updateStatus(user.id, { status });
+
+      if (response.success) {
+        const updatedUser = { ...user, status };
+        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Update driver status error:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshProfile = async (): Promise<boolean> => {
+    try {
+      if (!user) return false;
+
+      const response = await driverService.getProfile(user.id);
+
+      if (response.success && response.data) {
+        const driverData = response.data;
+        const userData: User = {
+          ...user,
+          name: driverData.name,
+          email: driverData.email,
+          phone: driverData.phoneNumber,
+          licenseNumber: driverData.licenseNumber,
+          vehicleType: driverData.vehicleType,
+          vehicleNumber: driverData.vehicleNumber,
+          status: driverData.status,
+          currentLatitude: driverData.currentLatitude,
+          currentLongitude: driverData.currentLongitude,
+          phoneNumber: driverData.phoneNumber,
+          lastLocationUpdate: driverData.lastLocationUpdate,
+        };
+
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        setUser(userData);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Refresh profile error:', error);
+      return false;
+    }
+  };
+
+  const startLocationTracking = async (): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const success = await locationService.startLocationTracking(user.id);
+      return success;
+    } catch (error) {
+      console.error('Start location tracking error:', error);
+      return false;
+    }
+  };
+
+  const stopLocationTracking = async (): Promise<void> => {
+    try {
+      await locationService.stopLocationTracking();
+    } catch (error) {
+      console.error('Stop location tracking error:', error);
+    }
+  };
+
+  const isLocationTrackingActive = (): boolean => {
+    return locationService.isLocationTrackingActive();
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
     login,
     logout,
-    updateProfile
+    updateProfile,
+    updateDriverStatus,
+    refreshProfile,
+    startLocationTracking,
+    stopLocationTracking,
+    isLocationTrackingActive
   };
 
   return (
