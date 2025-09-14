@@ -5,6 +5,7 @@ import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { DeliveryProvider } from '@/contexts/DeliveryContext';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -15,18 +16,20 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ThemeProvider value={DarkTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="auth/login" options={{ headerShown: false }} />
-          <Stack.Screen name="camera/delivery-photo" options={{
-            headerShown: false,
-            presentation: 'fullScreenModal'
-          }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        </Stack>
-        <StatusBar style="light" />
-      </ThemeProvider>
+      <DeliveryProvider>
+        <ThemeProvider value={DarkTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="auth/login" options={{ headerShown: false }} />
+            <Stack.Screen name="camera/delivery-photo" options={{
+              headerShown: false,
+              presentation: 'fullScreenModal'
+            }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          </Stack>
+          <StatusBar style="light" />
+        </ThemeProvider>
+      </DeliveryProvider>
     </AuthProvider>
   );
 }
