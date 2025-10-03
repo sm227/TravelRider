@@ -1,11 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useAuth } from '@/contexts/AuthContext';
 import { router } from 'expo-router';
 import { driverService, DriverStatsResponse } from '@/services/driverService';
+
+// 웹 호환 Alert 함수
+const showAlert = (title: string, message?: string, buttons?: any[]) => {
+  if (Platform.OS === 'web') {
+    // 웹에서는 confirm/alert 사용
+    if (buttons && buttons.length > 1) {
+      const confirmed = window.confirm(`${title}\n\n${message || ''}`);
+      const confirmButton = buttons.find(b => b.text !== '취소' && b.text !== 'Cancel');
+      if (confirmed && confirmButton?.onPress) {
+        confirmButton.onPress();
+      }
+    } else {
+      window.alert(`${title}\n\n${message || ''}`);
+      if (buttons?.[0]?.onPress) {
+        buttons[0].onPress();
+      }
+    }
+  } else {
+    Alert.alert(title, message, buttons);
+  }
+};
 
 export default function ProfileScreen() {
   const {
@@ -61,7 +82,7 @@ export default function ProfileScreen() {
   });
 
   const handleLogout = async () => {
-    Alert.alert(
+    showAlert(
       '로그아웃',
       '정말 로그아웃 하시겠습니까?',
       [
@@ -78,19 +99,19 @@ export default function ProfileScreen() {
   };
 
   const handleEditProfile = () => {
-    Alert.alert('프로필 수정', '프로필 수정 화면으로 이동합니다.');
+    showAlert('프로필 수정', '프로필 수정 화면으로 이동합니다.');
   };
 
   const handleVehicleInfo = () => {
-    Alert.alert('차량 정보', '차량 정보 관리 화면으로 이동합니다.');
+    showAlert('차량 정보', '차량 정보 관리 화면으로 이동합니다.');
   };
 
   const handleSettings = () => {
-    Alert.alert('설정', '설정 화면으로 이동합니다.');
+    showAlert('설정', '설정 화면으로 이동합니다.');
   };
 
   const handleHelp = () => {
-    Alert.alert('도움말', '도움말 및 고객센터 화면으로 이동합니다.');
+    showAlert('도움말', '도움말 및 고객센터 화면으로 이동합니다.');
   };
 
   const handleStatusChange = () => {
@@ -104,6 +125,31 @@ export default function ProfileScreen() {
       { label: '휴식', value: 'BREAK', description: '잠시 휴식 중입니다' }
     ];
 
+    // 웹에서는 단순화된 상태 변경
+    if (Platform.OS === 'web') {
+      const currentLabel = statusOptions.find(s => s.value === currentStatus)?.label;
+      const message = `현재 상태: ${currentLabel}\n\n변경할 상태:\n1. 온라인\n2. 오프라인\n3. 바쁨\n4. 휴식\n\n번호를 입력하세요 (1-4):`;
+      const input = window.prompt(message);
+
+      if (input) {
+        const index = parseInt(input) - 1;
+        if (index >= 0 && index < statusOptions.length) {
+          const option = statusOptions[index];
+          setIsUpdatingStatus(true);
+          updateDriverStatus(option.value as any).then(success => {
+            if (success) {
+              showAlert('상태 변경', `상태가 ${option.label}로 변경되었습니다.`);
+            } else {
+              showAlert('오류', '상태 변경에 실패했습니다.');
+            }
+          }).finally(() => {
+            setIsUpdatingStatus(false);
+          });
+        }
+      }
+      return;
+    }
+
     const buttons = statusOptions.map(option => ({
       text: `${option.label} ${currentStatus === option.value ? '✓' : ''}`,
       onPress: async () => {
@@ -113,12 +159,12 @@ export default function ProfileScreen() {
         try {
           const success = await updateDriverStatus(option.value as any);
           if (success) {
-            Alert.alert('상태 변경', `상태가 ${option.label}로 변경되었습니다.`);
+            showAlert('상태 변경', `상태가 ${option.label}로 변경되었습니다.`);
           } else {
-            Alert.alert('오류', '상태 변경에 실패했습니다.');
+            showAlert('오류', '상태 변경에 실패했습니다.');
           }
         } catch (error) {
-          Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+          showAlert('오류', '네트워크 오류가 발생했습니다.');
         } finally {
           setIsUpdatingStatus(false);
         }
@@ -158,7 +204,7 @@ export default function ProfileScreen() {
   const handleLocationTrackingToggle = async () => {
     const isActive = isLocationTrackingActive();
 
-    Alert.alert(
+    showAlert(
       '위치 추적',
       isActive
         ? '위치 추적을 중단하시겠습니까?'
@@ -171,17 +217,17 @@ export default function ProfileScreen() {
             try {
               if (isActive) {
                 await stopLocationTracking();
-                Alert.alert('위치 추적', '위치 추적이 중단되었습니다.');
+                showAlert('위치 추적', '위치 추적이 중단되었습니다.');
               } else {
                 const success = await startLocationTracking();
                 if (success) {
-                  Alert.alert('위치 추적', '위치 추적이 시작되었습니다.');
+                  showAlert('위치 추적', '위치 추적이 시작되었습니다.');
                 } else {
-                  Alert.alert('오류', '위치 권한을 확인해주세요.');
+                  showAlert('오류', '위치 권한을 확인해주세요.');
                 }
               }
             } catch (error) {
-              Alert.alert('오류', '위치 추적 설정 중 오류가 발생했습니다.');
+              showAlert('오류', '위치 추적 설정 중 오류가 발생했습니다.');
             }
           }
         }

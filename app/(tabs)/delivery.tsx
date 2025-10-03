@@ -11,15 +11,33 @@ import { DeliveryResponse } from '@/services/deliveryService';
 export default function DeliveryProgressScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { currentDelivery, updateDeliveryStatus } = useDelivery();
+  const { assignedDeliveries, currentDelivery, setCurrentDelivery, updateDeliveryStatus, fetchAssignedDeliveries } = useDelivery();
   const [currentStep, setCurrentStep] = useState<number>(1); // 1: 픽업 진행, 2: 배송 진행
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showList, setShowList] = useState(true); // 목록/진행 화면 전환
+
+  // 배차받은 배달 목록 가져오기
+  useEffect(() => {
+    if (user) {
+      fetchAssignedDeliveries();
+    }
+  }, [user, fetchAssignedDeliveries]);
+
+  // 디버깅: 상태 로그
+  useEffect(() => {
+    console.log('=== Delivery Screen Debug ===');
+    console.log('assignedDeliveries:', assignedDeliveries.length);
+    console.log('currentDelivery:', currentDelivery?.id);
+    console.log('showList:', showList);
+    console.log('currentStep:', currentStep);
+  }, [assignedDeliveries, currentDelivery, showList, currentStep]);
 
   // 배달 상태에 따라 현재 단계 결정
   useEffect(() => {
     if (currentDelivery) {
       switch (currentDelivery.status) {
         case 'ACCEPTED':
+        case 'ASSIGNED':
           setCurrentStep(1);
           break;
         case 'PICKED_UP':
@@ -34,6 +52,41 @@ export default function DeliveryProgressScreen() {
       }
     }
   }, [currentDelivery]);
+
+  const handleSelectDelivery = (delivery: DeliveryResponse) => {
+    setShowList(false);
+    setCurrentDelivery(delivery);
+  };
+
+  const handleStartDelivery = async (delivery: DeliveryResponse) => {
+    Alert.alert(
+      '배달 시작',
+      `이 배달을 시작하시겠습니까?\n\n픽업: ${delivery.pickupAddress}`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '시작',
+          onPress: async () => {
+            try {
+              setIsUpdating(true);
+              const success = await updateDeliveryStatus(delivery.id, 'ACCEPTED');
+              if (success) {
+                setShowList(false);
+                setCurrentDelivery(delivery);
+                Alert.alert('배달 시작', '픽업 장소로 이동해주세요.');
+              } else {
+                Alert.alert('오류', '배달을 시작할 수 없습니다.');
+              }
+            } catch (error) {
+              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+            } finally {
+              setIsUpdating(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handlePickupComplete = async () => {
     if (!currentDelivery) return;
@@ -161,15 +214,15 @@ export default function DeliveryProgressScreen() {
     );
   }
 
-  // 진행 중인 배달이 없는 경우
-  if (currentStep === 0 || !currentDelivery) {
+  // 배차받은 배달이 없는 경우
+  if (assignedDeliveries.length === 0) {
     return (
       <ThemedView style={[styles.emptyContainer, { paddingTop: insets.top }]}>
         <ThemedText type="title" style={styles.emptyTitle}>
-          진행 중인 배달이 없습니다
+          배차받은 배달이 없습니다
         </ThemedText>
         <Text style={styles.emptySubtitle}>
-          배달 목록에서 배달을 시작해주세요
+          배달 목록에서 배달을 수락해주세요
         </Text>
         <TouchableOpacity
           style={styles.goToListButton}
@@ -177,6 +230,64 @@ export default function DeliveryProgressScreen() {
         >
           <Text style={styles.goToListButtonText}>배달 목록 보기</Text>
         </TouchableOpacity>
+      </ThemedView>
+    );
+  }
+
+  // 배차받은 배달 목록 표시
+  if (showList || !currentDelivery || currentStep === 0) {
+    return (
+      <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.header}>
+          <ThemedText type="title" style={styles.headerTitle}>내 배달 목록</ThemedText>
+          <Text style={styles.headerSubtitle}>배차받은 {assignedDeliveries.length}건</Text>
+        </View>
+        <ScrollView style={styles.deliveryList} showsVerticalScrollIndicator={false}>
+          {assignedDeliveries.map((delivery) => (
+            <TouchableOpacity
+              key={delivery.id}
+              style={styles.deliveryCard}
+              onPress={() => handleSelectDelivery(delivery)}
+            >
+              <View style={styles.cardHeader}>
+                <Text style={styles.customerName}>배달 #{delivery.id}</Text>
+                <View style={[styles.statusBadge, { backgroundColor: delivery.status === 'ASSIGNED' ? '#666' : '#888' }]}>
+                  <Text style={styles.statusText}>
+                    {delivery.status === 'ASSIGNED' ? '대기' : delivery.status === 'ACCEPTED' ? '진행중' : '완료'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.addressContainer}>
+                <View style={styles.addressRow}>
+                  <Text style={styles.addressLabel}>픽업:</Text>
+                  <Text style={styles.addressText} numberOfLines={1}>{delivery.pickupAddress}</Text>
+                </View>
+                <View style={styles.addressRow}>
+                  <Text style={styles.addressLabel}>배송:</Text>
+                  <Text style={styles.addressText} numberOfLines={1}>{delivery.deliveryAddress}</Text>
+                </View>
+              </View>
+              <View style={styles.cardFooter}>
+                {delivery.status === 'ASSIGNED' && (
+                  <TouchableOpacity
+                    style={styles.startButton}
+                    onPress={() => handleStartDelivery(delivery)}
+                  >
+                    <Text style={styles.startButtonText}>배달 시작</Text>
+                  </TouchableOpacity>
+                )}
+                {(delivery.status === 'ACCEPTED' || delivery.status === 'PICKED_UP' || delivery.status === 'IN_PROGRESS') && (
+                  <TouchableOpacity
+                    style={styles.continueButton}
+                    onPress={() => handleSelectDelivery(delivery)}
+                  >
+                    <Text style={styles.continueButtonText}>계속하기</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </ThemedView>
     );
   }
@@ -194,6 +305,17 @@ export default function DeliveryProgressScreen() {
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Back Button */}
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            setShowList(true);
+            setCurrentDelivery(null);
+          }}
+        >
+          <Text style={styles.backButtonText}>← 목록으로</Text>
+        </TouchableOpacity>
+
         {/* Progress Indicator */}
         <View style={styles.progressContainer}>
           <View style={styles.progressStep}>
@@ -479,5 +601,102 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     textAlign: 'center',
     marginTop: 16,
+  },
+  header: {
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+    marginBottom: 16,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 4,
+    color: '#FFFFFF',
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#CCCCCC',
+  },
+  deliveryList: {
+    flex: 1,
+  },
+  deliveryCard: {
+    backgroundColor: '#111111',
+    borderRadius: 8,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  addressContainer: {
+    marginBottom: 16,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    alignItems: 'flex-start',
+  },
+  addressLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#CCCCCC',
+    width: 40,
+    marginRight: 8,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  startButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+  },
+  startButtonText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  continueButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 6,
+    backgroundColor: '#666666',
+    alignItems: 'center',
+  },
+  continueButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  backButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  backButtonText: {
+    color: '#CCCCCC',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

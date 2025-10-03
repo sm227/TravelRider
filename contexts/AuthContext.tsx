@@ -4,6 +4,7 @@ import axios from 'axios';
 import { Platform } from 'react-native';
 import { driverService, DriverResponse } from '@/services/driverService';
 import { locationService } from '@/services/locationService';
+import { authService } from '@/services/authService';
 
 export interface User {
   id: number;
@@ -11,7 +12,7 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'driver' | 'admin';
+  role: 'driver' | 'admin' | 'user';
   licenseNumber?: string;
   vehicleType?: string;
   vehicleNumber?: string;
@@ -27,6 +28,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
+  kakaoLogin: (kakaoEmail: string, kakaoName: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
   updateDriverStatus: (status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK') => Promise<boolean>;
@@ -97,59 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
-      // 데모 계정 로그인 처리 (개발/테스트용)
-      if (email === 'driver@travelrider.com' && password === 'password123') {
-        const mockUser: User = {
-          id: 1,
-          userId: 1,
-          name: '홍배달',
-          email: 'driver@travelrider.com',
-          phone: '010-9876-5432',
-          role: 'driver',
-          status: 'OFFLINE',
-          vehicleType: '오토바이',
-          vehicleNumber: '서울12가3456'
-        };
+      // 배달원 로그인 API 시도
+      const driverResponse = await driverService.login({ email, password });
 
-        const mockToken = 'demo_token_' + Date.now();
-
-        await AsyncStorage.setItem('authToken', mockToken);
-        await AsyncStorage.setItem('userData', JSON.stringify(mockUser));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-
-        setUser(mockUser);
-        return true;
-      }
-
-      // 카카오 데모 계정 로그인 처리
-      if (email === 'kakao@demo.com' && password === 'kakao_demo') {
-        const mockUser: User = {
-          id: 2,
-          userId: 2,
-          name: '김카카오',
-          email: 'kakao@demo.com',
-          phone: '010-1234-5678',
-          role: 'driver',
-          status: 'OFFLINE',
-          vehicleType: '자전거',
-          vehicleNumber: '서울98나1234'
-        };
-
-        const mockToken = 'kakao_demo_token_' + Date.now();
-
-        await AsyncStorage.setItem('authToken', mockToken);
-        await AsyncStorage.setItem('userData', JSON.stringify(mockUser));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-
-        setUser(mockUser);
-        return true;
-      }
-
-      // 실제 배달원 로그인 API 호출
-      const response = await driverService.login({ email, password });
-
-      if (response.success && response.data) {
-        const driverData = response.data;
+      if (driverResponse.success && driverResponse.data) {
+        const driverData = driverResponse.data;
 
         // DriverResponse를 User 형태로 매핑
         const userData: User = {
@@ -162,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           licenseNumber: driverData.licenseNumber,
           vehicleType: driverData.vehicleType,
           vehicleNumber: driverData.vehicleNumber,
-          status: driverData.status,
+          status: driverData.status || 'OFFLINE',
           currentLatitude: driverData.currentLatitude,
           currentLongitude: driverData.currentLongitude,
           phoneNumber: driverData.phoneNumber,
@@ -170,12 +124,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           createdAt: driverData.createdAt
         };
 
-        // JWT 토큰은 응답에서 받아야 함 (API 스펙에 따라 수정 필요)
-        const token = response.data.token || `driver_token_${driverData.id}_${Date.now()}`;
+        // JWT 토큰은 응답에서 받아야 함
+        const token = driverResponse.data.token || `driver_token_${driverData.id}_${Date.now()}`;
 
         await AsyncStorage.setItem('authToken', token);
         await AsyncStorage.setItem('userData', JSON.stringify(userData));
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+        setUser(userData);
+
+        // 로그인 후 자동으로 ONLINE 상태로 변경
+        if (userData.status === 'OFFLINE') {
+          await updateDriverStatus('ONLINE');
+        }
+
+        return true;
+      }
+
+      // 배달원 로그인 실패 시, 일반 사용자 로그인 시도 (fallback)
+      const response = await authService.login({ email, password });
+
+      if (response.success && response.data) {
+        const { token, userId, email: userEmail, name, role } = response.data;
+
+        // User 객체 생성
+        const userData: User = {
+          id: userId || 0,
+          userId: userId || 0,
+          name: name || email.split('@')[0],
+          email: userEmail || email,
+          role: (role?.toLowerCase() as 'user' | 'driver' | 'admin') || 'user',
+          status: 'OFFLINE'
+        };
+
+        // 토큰과 사용자 정보 저장
+        const authToken = token || `user_token_${userId}_${Date.now()}`;
+        await AsyncStorage.setItem('authToken', authToken);
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
 
         setUser(userData);
         return true;
@@ -309,6 +295,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const kakaoLogin = async (kakaoEmail: string, kakaoName: string): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+
+      // authService를 통해 카카오 로그인/회원가입 처리
+      const response = await authService.kakaoLoginOrRegister(kakaoEmail, kakaoName);
+
+      if (response.success && response.data) {
+        const { token, userId, email, name, role } = response.data;
+
+        // User 객체 생성
+        const userData: User = {
+          id: userId || 0,
+          userId: userId || 0,
+          name: name || kakaoName,
+          email: email || kakaoEmail,
+          role: (role?.toLowerCase() as 'user' | 'driver' | 'admin') || 'user',
+          status: 'OFFLINE'
+        };
+
+        // 토큰과 사용자 정보 저장
+        const authToken = token || `user_token_${userId}_${Date.now()}`;
+        await AsyncStorage.setItem('authToken', authToken);
+        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+
+        setUser(userData);
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Kakao login error:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const isLocationTrackingActive = (): boolean => {
     return locationService.isLocationTrackingActive();
   };
@@ -317,6 +342,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isLoading,
     login,
+    kakaoLogin,
     logout,
     updateProfile,
     updateDriverStatus,

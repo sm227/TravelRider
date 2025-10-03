@@ -12,19 +12,19 @@ export default function DeliveryListScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const {
-    deliveries,
+    availableDeliveries,
     isLoading,
-    fetchDriverDeliveries,
+    fetchAvailableDeliveries,
+    acceptDelivery,
     setCurrentDelivery,
-    updateDeliveryStatus,
     refreshDeliveries
   } = useDelivery();
 
   useEffect(() => {
     if (user) {
-      fetchDriverDeliveries();
+      fetchAvailableDeliveries();
     }
-  }, [user, fetchDriverDeliveries]);
+  }, [user, fetchAvailableDeliveries]);
 
   const getStatusText = (status: DeliveryStatus) => {
     switch (status) {
@@ -59,19 +59,31 @@ export default function DeliveryListScreen() {
     return hoursDiff > 2; // 2시간 이상 지난 배달을 긴급으로 표시
   };
 
-  const handleStartDelivery = async (delivery: DeliveryResponse) => {
-    try {
-      const success = await updateDeliveryStatus(delivery.id, 'ACCEPTED');
-      if (success) {
-        setCurrentDelivery(delivery);
-        router.push('/delivery');
-        Alert.alert('배달 시작', `${delivery.pickupAddress}로 이동하여 픽업을 진행해주세요.`);
-      } else {
-        Alert.alert('오류', '배달을 시작할 수 없습니다.');
-      }
-    } catch (error) {
-      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
-    }
+  const handleAcceptDelivery = async (delivery: DeliveryResponse) => {
+    Alert.alert(
+      '배달 수락',
+      `이 배달을 수락하시겠습니까?\n\n픽업: ${delivery.pickupAddress}\n배송: ${delivery.deliveryAddress}`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '수락',
+          onPress: async () => {
+            try {
+              const success = await acceptDelivery(delivery.id);
+              if (success) {
+                setCurrentDelivery(delivery);
+                Alert.alert('배달 수락 완료', '배달 진행 탭에서 배달을 시작해주세요.');
+                router.push('/delivery');
+              } else {
+                Alert.alert('오류', '배달을 수락할 수 없습니다.');
+              }
+            } catch (error) {
+              Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleDeliveryDetail = (delivery: DeliveryResponse) => {
@@ -108,17 +120,17 @@ export default function DeliveryListScreen() {
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <ThemedText type="title" style={styles.headerTitle}>배달 목록</ThemedText>
-        <Text style={styles.headerSubtitle}>총 {deliveries.length}건</Text>
+        <Text style={styles.headerSubtitle}>수락 가능 {availableDeliveries.length}건</Text>
       </View>
 
-      {isLoading && deliveries.length === 0 ? (
+      {isLoading && availableDeliveries.length === 0 ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FFFFFF" />
           <Text style={styles.loadingText}>배달 목록을 불러오는 중...</Text>
         </View>
-      ) : deliveries.length === 0 ? (
+      ) : availableDeliveries.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>배정된 배달이 없습니다.</Text>
+          <Text style={styles.emptyText}>현재 수락 가능한 배달이 없습니다.</Text>
           <TouchableOpacity
             style={styles.refreshButton}
             onPress={refreshDeliveries}
@@ -138,7 +150,7 @@ export default function DeliveryListScreen() {
             />
           }
         >
-          {deliveries.map((delivery) => (
+          {availableDeliveries.map((delivery) => (
             <TouchableOpacity
               key={delivery.id}
               style={styles.deliveryCard}
@@ -180,14 +192,12 @@ export default function DeliveryListScreen() {
                 >
                   <Text style={styles.actionButtonText}>상세보기</Text>
                 </TouchableOpacity>
-                {(delivery.status === 'ASSIGNED' || delivery.status === 'PENDING') && (
-                  <TouchableOpacity
-                    style={styles.startButton}
-                    onPress={() => handleStartDelivery(delivery)}
-                  >
-                    <Text style={styles.startButtonText}>배달 시작</Text>
-                  </TouchableOpacity>
-                )}
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={() => handleAcceptDelivery(delivery)}
+                >
+                  <Text style={styles.startButtonText}>배달 수락</Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           ))}

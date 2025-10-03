@@ -1,23 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import { ThemedText } from '@/components/themed-text';
+import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
-  Dimensions
+  Alert,
+  Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { useAuth } from '@/contexts/AuthContext';
-// import KakaoLogins from '@react-native-seoul/kakao-login';
+
+// 카카오 SDK는 Expo Go에서 작동하지 않으므로 타입만 임포트
+let KakaoLogins: any = null;
+try {
+  KakaoLogins = require('@react-native-seoul/kakao-login').default;
+} catch (error) {
+  console.log('Kakao SDK not available in Expo Go');
+}
 
 export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, kakaoLogin } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = Dimensions.get('window');
 
@@ -25,26 +31,44 @@ export default function LoginScreen() {
     try {
       setIsLoading(true);
 
-      // 개발 단계에서는 데모 로그인 처리
-      // 실제 운영 시에는 아래 주석 해제하고 카카오 로그인 사용
-      /*
-      const result = await KakaoLogins.login();
-      if (result) {
-        const success = await login(result.accessToken, 'kakao');
-        if (success) {
-          router.replace('/(tabs)');
-        } else {
-          Alert.alert('로그인 실패', '카카오 로그인 중 오류가 발생했습니다.');
-        }
+      // Expo Go에서는 카카오 SDK를 사용할 수 없으므로 체크
+      if (!KakaoLogins || typeof KakaoLogins.login !== 'function') {
+        Alert.alert(
+          '카카오 로그인 사용 불가',
+          'Expo Go에서는 카카오 로그인을 사용할 수 없습니다.\n\n개발 빌드(npx expo run:android 또는 npx expo run:ios)를 사용하거나, 테스트용 데모 계정을 사용해주세요.',
+          [
+            {
+              text: '확인',
+              style: 'default'
+            }
+          ]
+        );
+        setIsLoading(false);
+        return;
       }
-      */
 
-      // 데모용 카카오 로그인
-      const success = await login('kakao@demo.com', 'kakao_demo');
-      if (success) {
-        router.replace('/(tabs)');
-      } else {
-        Alert.alert('로그인 실패', '카카오 로그인 중 오류가 발생했습니다.');
+      // 카카오 로그인 SDK 호출
+      const loginResult = await KakaoLogins.login();
+
+      if (loginResult) {
+        // 카카오 프로필 정보 가져오기
+        const profile = await KakaoLogins.getProfile();
+
+        if (profile && profile.email) {
+          // 서버에 카카오 이메일과 이름으로 로그인/회원가입 처리
+          const success = await kakaoLogin(
+            profile.email,
+            profile.nickname || profile.email.split('@')[0]
+          );
+
+          if (success) {
+            router.replace('/(tabs)');
+          } else {
+            Alert.alert('로그인 실패', '카카오 로그인 처리 중 오류가 발생했습니다.');
+          }
+        } else {
+          Alert.alert('로그인 실패', '카카오 계정 이메일 정보가 필요합니다.');
+        }
       }
     } catch (error) {
       console.error('카카오 로그인 오류:', error);
@@ -57,7 +81,8 @@ export default function LoginScreen() {
   const handleDemoLogin = async () => {
     try {
       setIsLoading(true);
-      const success = await login('driver@travelrider.com', 'password123');
+      // 서버 DB의 실제 테스트 계정 사용
+      const success = await login('del@del.com', 'qqqq1111');
       if (success) {
         router.replace('/(tabs)');
       } else {

@@ -3,10 +3,13 @@ import { deliveryService, DeliveryResponse, DeliveryStatus } from '@/services/de
 import { useAuth } from './AuthContext';
 
 interface DeliveryContextType {
-  deliveries: DeliveryResponse[];
+  availableDeliveries: DeliveryResponse[]; // 배차 전 배달들
+  assignedDeliveries: DeliveryResponse[]; // 내가 배차받은 배달들
   currentDelivery: DeliveryResponse | null;
   isLoading: boolean;
-  fetchDriverDeliveries: () => Promise<void>;
+  fetchAvailableDeliveries: () => Promise<void>;
+  fetchAssignedDeliveries: () => Promise<void>;
+  acceptDelivery: (deliveryId: number) => Promise<boolean>;
   updateDeliveryStatus: (deliveryId: number, status: DeliveryStatus) => Promise<boolean>;
   setCurrentDelivery: (delivery: DeliveryResponse | null) => void;
   refreshDeliveries: () => Promise<void>;
@@ -15,18 +18,54 @@ interface DeliveryContextType {
 const DeliveryContext = createContext<DeliveryContextType | undefined>(undefined);
 
 export function DeliveryProvider({ children }: { children: ReactNode }) {
-  const [deliveries, setDeliveries] = useState<DeliveryResponse[]>([]);
+  const [availableDeliveries, setAvailableDeliveries] = useState<DeliveryResponse[]>([]);
+  const [assignedDeliveries, setAssignedDeliveries] = useState<DeliveryResponse[]>([]);
   const [currentDelivery, setCurrentDeliveryState] = useState<DeliveryResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (user) {
-      fetchDriverDeliveries();
-    }
-  }, [user, fetchDriverDeliveries]);
+  // 배차 전 배달 목록 조회
+  const fetchAvailableDeliveries = useCallback(async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const response = await deliveryService.getAllDeliveries();
 
-  const fetchDriverDeliveries = useCallback(async (): Promise<void> => {
+      if (response.success && response.data) {
+        // PENDING 상태인 배달들만 필터링 (아직 배차되지 않은 배달)
+        const available = response.data.filter(
+          delivery => delivery.status === 'PENDING'
+        );
+        setAvailableDeliveries(available);
+      } else {
+        console.warn('API response failed:', response.message);
+      }
+    } catch (error) {
+      console.error('Failed to fetch available deliveries:', error);
+
+      // 개발 중 mock 데이터
+      const mockAvailable: DeliveryResponse[] = [
+        {
+          id: 101,
+          userId: 0,
+          reservationId: 101,
+          pickupAddress: '서울시 강남구 테헤란로 123',
+          deliveryAddress: '서울시 서초구 반포대로 456',
+          itemDescription: '여행 가방',
+          weight: 15.5,
+          requestedAt: new Date().toISOString(),
+          status: 'PENDING' as DeliveryStatus,
+          trackingNumber: 'TR' + Date.now(),
+          estimatedDeliveryTime: new Date(Date.now() + 3600000).toISOString()
+        }
+      ];
+      setAvailableDeliveries(mockAvailable);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 내가 배차받은 배달 목록 조회
+  const fetchAssignedDeliveries = useCallback(async (): Promise<void> => {
     if (!user) return;
 
     try {
@@ -34,7 +73,7 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
       const response = await deliveryService.getDriverDeliveries(user.id);
 
       if (response.success && response.data) {
-        setDeliveries(response.data);
+        setAssignedDeliveries(response.data);
 
         // 진행 중인 배달이 있으면 현재 배달로 설정
         const inProgressDelivery = response.data.find(
@@ -47,44 +86,43 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
         console.warn('API response failed:', response.message);
       }
     } catch (error) {
-      console.error('Failed to fetch driver deliveries:', error);
-
-      // 개발 중 API 서버가 없을 때 mock 데이터 제공
-      const mockDeliveries: DeliveryResponse[] = [
-        {
-          id: 1,
-          userId: user.userId,
-          reservationId: 1,
-          pickupAddress: '서울시 강남구 테헤란로 123, 카페 코인',
-          deliveryAddress: '서울시 서초구 반포대로 456, 101동 503호',
-          itemDescription: '여행용 캐리어, 백팩 2개',
-          weight: 15.5,
-          requestedAt: new Date().toISOString(),
-          status: 'ASSIGNED' as DeliveryStatus,
-          trackingNumber: 'TR' + Date.now(),
-          estimatedDeliveryTime: new Date(Date.now() + 3600000).toISOString()
-        },
-        {
-          id: 2,
-          userId: user.userId,
-          reservationId: 2,
-          pickupAddress: '서울시 마포구 홍대입구역 2번 출구',
-          deliveryAddress: '서울시 용산구 한강대로 321, 202호',
-          itemDescription: '노트북 가방, 서류 박스',
-          weight: 8.2,
-          requestedAt: new Date(Date.now() - 1800000).toISOString(),
-          status: 'PENDING' as DeliveryStatus,
-          trackingNumber: 'TR' + (Date.now() - 1000),
-          estimatedDeliveryTime: new Date(Date.now() + 1800000).toISOString()
-        }
-      ];
-
-      console.log('Using mock delivery data for development');
-      setDeliveries(mockDeliveries);
+      console.error('Failed to fetch assigned deliveries:', error);
+      setAssignedDeliveries([]);
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, currentDelivery]);
+
+  // 배달 수락 (배차 받기)
+  const acceptDelivery = async (deliveryId: number): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      setIsLoading(true);
+      const response = await deliveryService.assignDriver(deliveryId, user.id);
+
+      if (response.success) {
+        // 배차 후 목록 갱신
+        await fetchAvailableDeliveries();
+        await fetchAssignedDeliveries();
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Failed to accept delivery:', error);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchAvailableDeliveries();
+      fetchAssignedDeliveries();
+    }
+  }, [user, fetchAvailableDeliveries, fetchAssignedDeliveries]);
 
   const updateDeliveryStatus = async (
     deliveryId: number,
@@ -96,7 +134,7 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
 
       if (response.success) {
         // 로컬 상태 업데이트
-        setDeliveries(prev =>
+        setAssignedDeliveries(prev =>
           prev.map(delivery =>
             delivery.id === deliveryId
               ? { ...delivery, status }
@@ -131,7 +169,8 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshDeliveries = async (): Promise<void> => {
-    await fetchDriverDeliveries();
+    await fetchAvailableDeliveries();
+    await fetchAssignedDeliveries();
   };
 
   // 현재 배달이 있을 때 주기적으로 업데이트 (임시 비활성화)
@@ -146,10 +185,13 @@ export function DeliveryProvider({ children }: { children: ReactNode }) {
   // }, [currentDelivery, fetchDriverDeliveries]);
 
   const value: DeliveryContextType = {
-    deliveries,
+    availableDeliveries,
+    assignedDeliveries,
     currentDelivery,
     isLoading,
-    fetchDriverDeliveries,
+    fetchAvailableDeliveries,
+    fetchAssignedDeliveries,
+    acceptDelivery,
     updateDeliveryStatus,
     setCurrentDelivery,
     refreshDeliveries
