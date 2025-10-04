@@ -1,0 +1,30 @@
+{
+  "cli": {
+    "version": ">= 16.20.1",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "KOTLIN_VERSION": "2.0.21"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "KOTLIN_VERSION": "2.0.21"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "KOTLIN_VERSION": "2.0.21"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
