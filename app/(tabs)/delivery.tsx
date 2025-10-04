@@ -418,12 +418,12 @@ export default function DeliveryProgressScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#1A1A1A',
     paddingHorizontal: 16,
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,

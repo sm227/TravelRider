@@ -189,7 +189,7 @@ export default function DeliveryPhotoScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#1A1A1A',
   },
   permissionContainer: {
     flex: 1,

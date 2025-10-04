@@ -357,63 +357,48 @@ export default function ProfileScreen() {
             <Text style={styles.loadingText}>통계 로딩 중...</Text>
           </View>
         ) : (
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>
-                {driverInfo.totalDeliveries}
-              </Text>
-              <Text style={styles.statLabel}>총 배달</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>{driverInfo.completedToday}</Text>
-              <Text style={styles.statLabel}>오늘 완료</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>
-                {(driverInfo.todayEarnings / 10000).toFixed(0)}만
-              </Text>
-              <Text style={styles.statLabel}>오늘 수익</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Additional Stats */}
-        {driverStats && (
-          <View style={styles.additionalStatsContainer}>
-            <View style={styles.statRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
-                  {driverInfo.completedDeliveries}
-                </Text>
-                <Text style={styles.statLabel}>완료 배달</Text>
+          <>
+            {/* 오늘 통계 */}
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{driverInfo.completedToday}</Text>
+                <Text style={styles.statLabel}>오늘 배달</Text>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>
+                  {(driverInfo.todayEarnings / 10000).toFixed(0)}만
+                </Text>
+                <Text style={styles.statLabel}>오늘 수익</Text>
+              </View>
+              <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{driverInfo.onlineHours}h</Text>
                 <Text style={styles.statLabel}>온라인 시간</Text>
               </View>
             </View>
-            <View style={styles.statRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>
+
+            {/* 전체 통계 */}
+            <View style={styles.totalStatsContainer}>
+              <View style={styles.totalStatRow}>
+                <Text style={styles.totalStatLabel}>총 배달 건수</Text>
+                <Text style={styles.totalStatValue}>{driverInfo.totalDeliveries}건</Text>
+              </View>
+              <View style={styles.totalStatRow}>
+                <Text style={styles.totalStatLabel}>누적 수익</Text>
+                <Text style={styles.totalStatValue}>
                   {(driverInfo.totalEarnings / 10000).toFixed(0)}만원
                 </Text>
-                <Text style={styles.statLabel}>총 수익</Text>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Pressable
-                  onPress={loadDriverStats}
-                  style={({ pressed }) => [
-                    styles.refreshStats,
-                    pressed && styles.refreshStatsPressed,
-                  ]}
-                >
-                  <Text style={styles.refreshStatsText}>새로고침</Text>
-                </Pressable>
-              </View>
+              <Pressable
+                onPress={loadDriverStats}
+                style={({ pressed }) => [
+                  styles.refreshButton,
+                  pressed && styles.refreshButtonPressed,
+                ]}
+              >
+                <Text style={styles.refreshButtonText}>통계 새로고침</Text>
+              </Pressable>
             </View>
-          </View>
+          </>
         )}
 
         {/* Vehicle Info */}
@@ -552,39 +537,29 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#1A1A1A",
     paddingHorizontal: 16,
   },
   profileHeader: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#111111",
-    borderRadius: 16,
+    backgroundColor: "transparent",
     padding: 24,
     marginVertical: 20,
-    borderWidth: 1,
-    borderColor: "#222222",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
   },
   profileImageContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 20,
-    borderWidth: 2,
-    borderColor: "#3A3A3A",
   },
   profileImageText: {
     fontSize: 36,
     fontWeight: "700",
-    color: "#FFFFFF",
+    color: "#000000",
   },
   profileInfo: {
     flex: 1,
@@ -611,7 +586,7 @@ const styles = StyleSheet.create({
   ratingBarContainer: {
     width: 100,
     height: 6,
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "#222222",
     borderRadius: 3,
     marginRight: 12,
     overflow: "hidden",
@@ -638,12 +613,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "transparent",
     borderRadius: 12,
     padding: 20,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#333333",
   },
   statNumber: {
     fontSize: 26,
@@ -658,12 +633,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   infoCard: {
-    backgroundColor: "#111111",
+    backgroundColor: "transparent",
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#222222",
+    borderColor: "#333333",
   },
   cardTitle: {
     fontSize: 18,
@@ -679,25 +654,23 @@ const styles = StyleSheet.create({
     fontWeight: "400",
   },
   editButton: {
-    backgroundColor: "transparent",
+    backgroundColor: "#FFFFFF",
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
     alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "#444444",
   },
   editButtonText: {
-    color: "#CCCCCC",
+    color: "#000000",
     fontSize: 14,
     fontWeight: "600",
   },
   menuSection: {
-    backgroundColor: "#111111",
+    backgroundColor: "transparent",
     borderRadius: 12,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#222222",
+    borderColor: "#333333",
     overflow: "hidden",
   },
   menuItem: {
@@ -706,11 +679,11 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#1A1A1A",
-    backgroundColor: "#111111",
+    borderBottomColor: "#222222",
+    backgroundColor: "transparent",
   },
   menuItemPressed: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "#111111",
   },
   menuText: {
     flex: 1,
@@ -730,13 +703,13 @@ const styles = StyleSheet.create({
     fontWeight: "300",
   },
   logoutButton: {
-    backgroundColor: "#1A1A1A",
+    backgroundColor: "transparent",
     paddingVertical: 18,
     borderRadius: 12,
     alignItems: "center",
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#2A2A2A",
+    borderColor: "#333333",
   },
   logoutButtonText: {
     color: "#FFFFFF",
@@ -779,9 +752,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginTop: 10,
     alignSelf: "flex-start",
-    backgroundColor: "#2A2A2A",
+    backgroundColor: "transparent",
     borderWidth: 1,
-    borderColor: "#3A3A3A",
+    borderColor: "#444444",
   },
   statusPressed: {
     opacity: 0.7,
@@ -808,44 +781,48 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontWeight: "500",
   },
-  additionalStatsContainer: {
-    backgroundColor: "#111111",
+  totalStatsContainer: {
+    backgroundColor: "transparent",
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#222222",
+    borderColor: "#333333",
   },
-  statRow: {
+  totalStatRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#222222",
   },
-  statItem: {
-    flex: 1,
+  totalStatLabel: {
+    fontSize: 15,
+    color: "#AAAAAA",
+    fontWeight: "500",
+  },
+  totalStatValue: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  refreshButton: {
+    backgroundColor: "transparent",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#444444",
     alignItems: "center",
   },
-  statDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: "#333333",
-    marginHorizontal: 16,
+  refreshButtonPressed: {
+    backgroundColor: "#222222",
   },
-  refreshStats: {
-    backgroundColor: "#2A2A2A",
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#3A3A3A",
-  },
-  refreshStatsPressed: {
-    backgroundColor: "#333333",
-  },
-  refreshStatsText: {
+  refreshButtonText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
   },
   clockOutButton: {
