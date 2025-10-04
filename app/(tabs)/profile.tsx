@@ -350,56 +350,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Stats Cards */}
-        {isLoadingStats ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#FFFFFF" />
-            <Text style={styles.loadingText}>통계 로딩 중...</Text>
-          </View>
-        ) : (
-          <>
-            {/* 오늘 통계 */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{driverInfo.completedToday}</Text>
-                <Text style={styles.statLabel}>오늘 배달</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>
-                  {(driverInfo.todayEarnings / 10000).toFixed(0)}만
-                </Text>
-                <Text style={styles.statLabel}>오늘 수익</Text>
-              </View>
-              <View style={styles.statCard}>
-                <Text style={styles.statNumber}>{driverInfo.onlineHours}h</Text>
-                <Text style={styles.statLabel}>온라인 시간</Text>
-              </View>
-            </View>
-
-            {/* 전체 통계 */}
-            <View style={styles.totalStatsContainer}>
-              <View style={styles.totalStatRow}>
-                <Text style={styles.totalStatLabel}>총 배달 건수</Text>
-                <Text style={styles.totalStatValue}>{driverInfo.totalDeliveries}건</Text>
-              </View>
-              <View style={styles.totalStatRow}>
-                <Text style={styles.totalStatLabel}>누적 수익</Text>
-                <Text style={styles.totalStatValue}>
-                  {(driverInfo.totalEarnings / 10000).toFixed(0)}만원
-                </Text>
-              </View>
-              <Pressable
-                onPress={loadDriverStats}
-                style={({ pressed }) => [
-                  styles.refreshButton,
-                  pressed && styles.refreshButtonPressed,
-                ]}
-              >
-                <Text style={styles.refreshButtonText}>통계 새로고침</Text>
-              </Pressable>
-            </View>
-          </>
-        )}
 
         {/* Vehicle Info */}
         <View style={styles.infoCard}>
@@ -605,33 +555,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#CCCCCC",
   },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
-    gap: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "transparent",
-    borderRadius: 12,
-    padding: 20,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#333333",
-  },
-  statNumber: {
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  statLabel: {
-    fontSize: 13,
-    color: "#AAAAAA",
-    fontWeight: "500",
-  },
   infoCard: {
     backgroundColor: "transparent",
     borderRadius: 12,
@@ -780,50 +703,6 @@ const styles = StyleSheet.create({
     color: "#AAAAAA",
     marginTop: 12,
     fontWeight: "500",
-  },
-  totalStatsContainer: {
-    backgroundColor: "transparent",
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: "#333333",
-  },
-  totalStatRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#222222",
-  },
-  totalStatLabel: {
-    fontSize: 15,
-    color: "#AAAAAA",
-    fontWeight: "500",
-  },
-  totalStatValue: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    fontWeight: "700",
-  },
-  refreshButton: {
-    backgroundColor: "transparent",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    marginTop: 16,
-    borderWidth: 1,
-    borderColor: "#444444",
-    alignItems: "center",
-  },
-  refreshButtonPressed: {
-    backgroundColor: "#222222",
-  },
-  refreshButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
   },
   clockOutButton: {
     backgroundColor: "#DD3333",

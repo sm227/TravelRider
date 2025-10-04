@@ -46,7 +46,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="delivery"
         options={{
-          title: '배달 진행',
+          title: '내 배달',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="truck.box.fill" color={color} />,
         }}
       />

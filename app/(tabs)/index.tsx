@@ -341,51 +341,43 @@ export default function DeliveryListScreen() {
             <TouchableOpacity
               key={delivery.id}
               style={styles.deliveryCard}
-              onPress={() => handleDeliveryDetail(delivery)}
+              onPress={() => handleAcceptDelivery(delivery)}
+              activeOpacity={0.7}
             >
-              <View style={styles.cardHeader}>
-                <Text style={styles.customerName}>{getCustomerName(delivery)}</Text>
-                <View style={styles.statusContainer}>
-                  {isUrgentDelivery(delivery) && (
-                    <View style={styles.priorityBadge}>
-                      <Text style={styles.priorityText}>긴급</Text>
-                    </View>
-                  )}
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(delivery.status) }]}>
-                    <Text style={styles.statusText}>{getStatusText(delivery.status)}</Text>
-                  </View>
-                </View>
+              {/* 상단 메타 정보 */}
+              <View style={styles.cardMeta}>
+                <Text style={styles.metaTime}>
+                  {new Date(delivery.requestedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+                <Text style={styles.metaDot}>·</Text>
+                <Text style={styles.metaDistance}>{(Math.random() * 5 + 1).toFixed(1)}km</Text>
+                <Text style={styles.metaDot}>·</Text>
+                <Text style={styles.metaItem}>{delivery.weight}kg</Text>
+                {isUrgentDelivery(delivery) && (
+                  <>
+                    <Text style={styles.metaDot}>·</Text>
+                    <Text style={styles.metaUrgent}>긴급</Text>
+                  </>
+                )}
               </View>
 
-              <View style={styles.addressContainer}>
-                <View style={styles.addressRow}>
-                  <Text style={styles.addressLabel}>픽업:</Text>
-                  <Text style={styles.addressText} numberOfLines={2}>{delivery.pickupAddress}</Text>
-                </View>
-                <View style={styles.addressRow}>
-                  <Text style={styles.addressLabel}>배송:</Text>
-                  <Text style={styles.addressText} numberOfLines={2}>{delivery.deliveryAddress}</Text>
-                </View>
-                <View style={styles.addressRow}>
-                  <Text style={styles.addressLabel}>물품:</Text>
-                  <Text style={styles.addressText} numberOfLines={1}>{delivery.itemDescription}</Text>
-                </View>
+              {/* 픽업지 - 가장 크게 */}
+              <Text style={styles.pickupAddress} numberOfLines={1}>
+                {delivery.pickupAddress}
+              </Text>
+
+              {/* 배송지 */}
+              <View style={styles.deliveryRow}>
+                <Text style={styles.deliveryLabel}>→</Text>
+                <Text style={styles.deliveryAddress} numberOfLines={1}>
+                  {delivery.deliveryAddress}
+                </Text>
               </View>
 
-              <View style={styles.cardFooter}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => handleDeliveryDetail(delivery)}
-                >
-                  <Text style={styles.actionButtonText}>상세보기</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.startButton}
-                  onPress={() => handleAcceptDelivery(delivery)}
-                >
-                  <Text style={styles.startButtonText}>배달 수락</Text>
-                </TouchableOpacity>
-              </View>
+              {/* 물품 정보 */}
+              <Text style={styles.itemText} numberOfLines={1}>
+                {delivery.itemDescription}
+              </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -420,99 +412,68 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deliveryCard: {
-    backgroundColor: '#111111',
-    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
     padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#333333',
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#444444',
   },
-  cardHeader: {
+  cardMeta: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  customerName: {
+  metaTime: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FF9800',
+  },
+  metaDot: {
+    fontSize: 13,
+    color: '#555555',
+    marginHorizontal: 6,
+  },
+  metaDistance: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FF9800',
+  },
+  metaItem: {
+    fontSize: 13,
+    color: '#AAAAAA',
+  },
+  metaUrgent: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FF3D00',
+  },
+  pickupAddress: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 10,
+    lineHeight: 26,
+  },
+  deliveryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  deliveryLabel: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  priorityBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  priorityText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  addressContainer: {
-    marginBottom: 16,
-  },
-  addressRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    alignItems: 'flex-start',
-  },
-  addressLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#CCCCCC',
-    width: 40,
+    color: '#888888',
     marginRight: 8,
   },
-  addressText: {
-    fontSize: 14,
-    color: '#AAAAAA',
+  deliveryAddress: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#DDDDDD',
     flex: 1,
   },
-  cardFooter: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#444444',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-  },
-  actionButtonText: {
-    color: '#CCCCCC',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  startButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 6,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-  },
-  startButtonText: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '500',
+  itemText: {
+    fontSize: 13,
+    color: '#999999',
   },
   emptyContainer: {
     flex: 1,

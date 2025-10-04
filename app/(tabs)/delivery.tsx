@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Pressable } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useDelivery } from '@/contexts/DeliveryContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { DeliveryResponse } from '@/services/deliveryService';
+import { driverService, DriverStatsResponse } from '@/services/driverService';
 
 export default function DeliveryProgressScreen() {
   const insets = useSafeAreaInsets();
@@ -15,13 +16,33 @@ export default function DeliveryProgressScreen() {
   const [currentStep, setCurrentStep] = useState<number>(1); // 1: 픽업 진행, 2: 배송 진행
   const [isUpdating, setIsUpdating] = useState(false);
   const [showList, setShowList] = useState(true); // 목록/진행 화면 전환
+  const [driverStats, setDriverStats] = useState<DriverStatsResponse | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+  const [selectedTab, setSelectedTab] = useState<'progress' | 'completed'>('progress'); // 진행중/완료 탭
 
   // 배차받은 배달 목록 가져오기
   useEffect(() => {
     if (user) {
       fetchAssignedDeliveries();
+      loadDriverStats();
     }
   }, [user, fetchAssignedDeliveries]);
+
+  const loadDriverStats = async () => {
+    if (!user) return;
+
+    try {
+      setIsLoadingStats(true);
+      const response = await driverService.getStats(user.id);
+      if (response.success && response.data) {
+        setDriverStats(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load driver stats:', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   // 디버깅: 상태 로그
   useEffect(() => {
@@ -236,57 +257,164 @@ export default function DeliveryProgressScreen() {
 
   // 배차받은 배달 목록 표시
   if (showList || !currentDelivery || currentStep === 0) {
+    const getDriverInfo = () => ({
+      completedToday: driverStats?.todayDeliveries || 0,
+      todayEarnings: driverStats?.todayEarnings || 0,
+      onlineHours: driverStats?.onlineHours || 0,
+      totalDeliveries: driverStats?.totalDeliveries || 0,
+      totalEarnings: driverStats?.totalEarnings || 0,
+    });
+
+    const driverInfo = getDriverInfo();
+
+    // 진행중/완료 배달 필터링
+    const progressDeliveries = assignedDeliveries.filter(d =>
+      d.status === 'ASSIGNED' || d.status === 'ACCEPTED' || d.status === 'PICKED_UP' || d.status === 'IN_PROGRESS'
+    );
+    const completedDeliveries = assignedDeliveries.filter(d => d.status === 'DELIVERED');
+
+    const currentDeliveries = selectedTab === 'progress' ? progressDeliveries : completedDeliveries;
+
     return (
       <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.header}>
-          <ThemedText type="title" style={styles.headerTitle}>내 배달 목록</ThemedText>
+          <ThemedText type="title" style={styles.headerTitle}>내 배달</ThemedText>
           <Text style={styles.headerSubtitle}>배차받은 {assignedDeliveries.length}건</Text>
         </View>
-        <ScrollView style={styles.deliveryList} showsVerticalScrollIndicator={false}>
-          {assignedDeliveries.map((delivery) => (
-            <TouchableOpacity
-              key={delivery.id}
-              style={styles.deliveryCard}
-              onPress={() => handleSelectDelivery(delivery)}
-            >
-              <View style={styles.cardHeader}>
-                <Text style={styles.customerName}>배달 #{delivery.id}</Text>
-                <View style={[styles.statusBadge, { backgroundColor: delivery.status === 'ASSIGNED' ? '#666' : '#888' }]}>
-                  <Text style={styles.statusText}>
-                    {delivery.status === 'ASSIGNED' ? '대기' : delivery.status === 'ACCEPTED' ? '진행중' : '완료'}
+
+        {/* 탭 전환 */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'progress' && styles.tabActive]}
+            onPress={() => setSelectedTab('progress')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'progress' && styles.tabTextActive]}>
+              진행중 ({progressDeliveries.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, selectedTab === 'completed' && styles.tabActive]}
+            onPress={() => setSelectedTab('completed')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'completed' && styles.tabTextActive]}>
+              완료 ({completedDeliveries.length})
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* 통계 - 완료 탭에만 표시 */}
+        {selectedTab === 'completed' && (
+          isLoadingStats ? (
+            <View style={styles.statsLoadingContainer}>
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            </View>
+          ) : (
+            <>
+              {/* 오늘 통계 */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statCard}>
+                  <Text style={styles.statNumber}>{driverInfo.completedToday}</Text>
+                  <Text style={styles.statLabel}>오늘 배달</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statNumber}>
+                    {(driverInfo.todayEarnings / 10000).toFixed(0)}만
+                  </Text>
+                  <Text style={styles.statLabel}>오늘 수익</Text>
+                </View>
+                <View style={styles.statCard}>
+                  <Text style={styles.statNumber}>{driverInfo.onlineHours}h</Text>
+                  <Text style={styles.statLabel}>온라인 시간</Text>
+                </View>
+              </View>
+
+              {/* 전체 통계 */}
+              <View style={styles.totalStatsContainer}>
+                <View style={styles.totalStatRow}>
+                  <Text style={styles.totalStatLabel}>총 배달 건수</Text>
+                  <Text style={styles.totalStatValue}>{driverInfo.totalDeliveries}건</Text>
+                </View>
+                <View style={styles.totalStatRow}>
+                  <Text style={styles.totalStatLabel}>누적 수익</Text>
+                  <Text style={styles.totalStatValue}>
+                    {(driverInfo.totalEarnings / 10000).toFixed(0)}만원
                   </Text>
                 </View>
+                <Pressable
+                  onPress={loadDriverStats}
+                  style={({ pressed }) => [
+                    styles.refreshButton,
+                    pressed && styles.refreshButtonPressed,
+                  ]}
+                >
+                  <Text style={styles.refreshButtonText}>통계 새로고침</Text>
+                </Pressable>
               </View>
-              <View style={styles.addressContainer}>
-                <View style={styles.addressRow}>
-                  <Text style={styles.addressLabel}>픽업:</Text>
-                  <Text style={styles.addressText} numberOfLines={1}>{delivery.pickupAddress}</Text>
+            </>
+          )
+        )}
+
+        <ScrollView style={styles.deliveryList} showsVerticalScrollIndicator={false}>
+          {currentDeliveries.length === 0 ? (
+            <View style={styles.emptyList}>
+              <Text style={styles.emptyListText}>
+                {selectedTab === 'progress' ? '진행중인 배달이 없습니다' : '완료된 배달이 없습니다'}
+              </Text>
+            </View>
+          ) : (
+            currentDeliveries.map((delivery) => {
+            const getStatusText = () => {
+              if (delivery.status === 'ASSIGNED') return '대기';
+              if (delivery.status === 'ACCEPTED') return '픽업중';
+              if (delivery.status === 'PICKED_UP') return '배송중';
+              if (delivery.status === 'IN_PROGRESS') return '배송중';
+              return '완료';
+            };
+
+            const getStatusColor = () => {
+              if (delivery.status === 'ASSIGNED') return '#FF9800';
+              if (delivery.status === 'ACCEPTED') return '#2196F3';
+              if (delivery.status === 'PICKED_UP' || delivery.status === 'IN_PROGRESS') return '#4CAF50';
+              return '#666666';
+            };
+
+            return (
+              <TouchableOpacity
+                key={delivery.id}
+                style={styles.deliveryCard}
+                onPress={() => delivery.status === 'ASSIGNED' ? handleStartDelivery(delivery) : handleSelectDelivery(delivery)}
+                activeOpacity={0.7}
+              >
+                {/* 상단 메타 */}
+                <View style={styles.cardMeta}>
+                  <Text style={styles.deliveryNumber}>#{delivery.id}</Text>
+                  <Text style={styles.metaDot}>·</Text>
+                  <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                    {getStatusText()}
+                  </Text>
                 </View>
-                <View style={styles.addressRow}>
-                  <Text style={styles.addressLabel}>배송:</Text>
-                  <Text style={styles.addressText} numberOfLines={1}>{delivery.deliveryAddress}</Text>
+
+                {/* 픽업지 */}
+                <Text style={styles.pickupAddress} numberOfLines={1}>
+                  {delivery.pickupAddress}
+                </Text>
+
+                {/* 배송지 */}
+                <View style={styles.deliveryRow}>
+                  <Text style={styles.deliveryLabel}>→</Text>
+                  <Text style={styles.deliveryAddress} numberOfLines={1}>
+                    {delivery.deliveryAddress}
+                  </Text>
                 </View>
-              </View>
-              <View style={styles.cardFooter}>
-                {delivery.status === 'ASSIGNED' && (
-                  <TouchableOpacity
-                    style={styles.startButton}
-                    onPress={() => handleStartDelivery(delivery)}
-                  >
-                    <Text style={styles.startButtonText}>배달 시작</Text>
-                  </TouchableOpacity>
-                )}
-                {(delivery.status === 'ACCEPTED' || delivery.status === 'PICKED_UP' || delivery.status === 'IN_PROGRESS') && (
-                  <TouchableOpacity
-                    style={styles.continueButton}
-                    onPress={() => handleSelectDelivery(delivery)}
-                  >
-                    <Text style={styles.continueButtonText}>계속하기</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
+
+                {/* 물품 정보 */}
+                <Text style={styles.itemText} numberOfLines={1}>
+                  {delivery.itemDescription} · {delivery.weight}kg
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+          )}
         </ScrollView>
       </ThemedView>
     );
@@ -622,72 +750,165 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   deliveryCard: {
-    backgroundColor: '#111111',
-    borderRadius: 8,
+    backgroundColor: 'transparent',
+    borderRadius: 10,
     padding: 20,
+    marginBottom: 14,
+    borderWidth: 1.5,
+    borderColor: '#444444',
+  },
+  cardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  deliveryNumber: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#AAAAAA',
+  },
+  metaDot: {
+    fontSize: 13,
+    color: '#555555',
+    marginHorizontal: 6,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  pickupAddress: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 10,
+    lineHeight: 26,
+  },
+  deliveryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  deliveryLabel: {
+    fontSize: 18,
+    color: '#888888',
+    marginRight: 8,
+  },
+  deliveryAddress: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#DDDDDD',
+    flex: 1,
+  },
+  itemText: {
+    fontSize: 13,
+    color: '#999999',
+  },
+  statsLoadingContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#AAAAAA',
+    fontWeight: '500',
+  },
+  totalStatsContainer: {
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    padding: 18,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#333333',
   },
-  cardHeader: {
+  totalStatRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#222222',
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 4,
+  totalStatLabel: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    fontWeight: '500',
   },
-  statusText: {
+  totalStatValue: {
+    fontSize: 15,
     color: '#FFFFFF',
-    fontSize: 11,
+    fontWeight: '700',
+  },
+  refreshButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#444444',
+    alignItems: 'center',
+  },
+  refreshButtonPressed: {
+    backgroundColor: '#222222',
+  },
+  refreshButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
-  addressContainer: {
+  tabContainer: {
+    flexDirection: 'row',
     marginBottom: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#333333',
+    padding: 4,
   },
-  addressRow: {
-    flexDirection: 'row',
-    marginBottom: 8,
-    alignItems: 'flex-start',
-  },
-  addressLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#CCCCCC',
-    width: 40,
-    marginRight: 8,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  startButton: {
+  tab: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 6,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  tabActive: {
     backgroundColor: '#FFFFFF',
-    alignItems: 'center',
   },
-  startButtonText: {
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#888888',
+  },
+  tabTextActive: {
     color: '#000000',
-    fontSize: 14,
-    fontWeight: '500',
   },
-  continueButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 6,
-    backgroundColor: '#666666',
+  emptyList: {
+    paddingVertical: 60,
     alignItems: 'center',
   },
-  continueButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '500',
+  emptyListText: {
+    fontSize: 15,
+    color: '#666666',
   },
   backButton: {
     paddingHorizontal: 16,
