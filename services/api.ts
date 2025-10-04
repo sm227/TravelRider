@@ -1,5 +1,5 @@
-import axios, { AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios, { AxiosResponse } from 'axios';
 import { Platform } from 'react-native';
 
 // 플랫폼별 API URL 설정
@@ -7,7 +7,7 @@ const getApiBaseUrl = () => {
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:8080/api'; // Android 에뮬레이터
   } else if (Platform.OS === 'ios') {
-    return 'http://192.168.55.90:8080/api'; // iOS - 컴퓨터의 실제 IP
+    return 'http://172.28.51.237:8080/api'; // iOS - 컴퓨터의 실제 IP
   } else {
     return 'http://localhost:8080/api'; // 웹
   }

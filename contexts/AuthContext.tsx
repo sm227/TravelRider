@@ -1,10 +1,16 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import axios from 'axios';
-import { Platform } from 'react-native';
-import { driverService, DriverResponse } from '@/services/driverService';
-import { locationService } from '@/services/locationService';
-import { authService } from '@/services/authService';
+import { authService } from "@/services/authService";
+import { driverService } from "@/services/driverService";
+import { locationService } from "@/services/locationService";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import React, {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
+import { Platform } from "react-native";
 
 export interface User {
   id: number;
@@ -12,11 +18,11 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'driver' | 'admin' | 'user';
+  role: "driver" | "admin" | "user";
   licenseNumber?: string;
   vehicleType?: string;
   vehicleNumber?: string;
-  status?: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK';
+  status?: "ONLINE" | "OFFLINE" | "BUSY" | "BREAK";
   currentLatitude?: number;
   currentLongitude?: number;
   phoneNumber?: string;
@@ -31,7 +37,9 @@ interface AuthContextType {
   kakaoLogin: (kakaoEmail: string, kakaoName: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
-  updateDriverStatus: (status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK') => Promise<boolean>;
+  updateDriverStatus: (
+    status: "ONLINE" | "OFFLINE" | "BUSY" | "BREAK"
+  ) => Promise<boolean>;
   refreshProfile: () => Promise<boolean>;
   startLocationTracking: () => Promise<boolean>;
   stopLocationTracking: () => Promise<void>;
@@ -42,12 +50,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // 플랫폼별 API URL 설정
 const getApiBaseUrl = () => {
-  if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8080/api'; // Android 에뮬레이터
-  } else if (Platform.OS === 'ios') {
-    return 'http://192.168.55.90:8080/api'; // iOS - 컴퓨터의 실제 IP
+  if (Platform.OS === "android") {
+    return "http://10.0.2.2:8080/api"; // Android 에뮬레이터
+  } else if (Platform.OS === "ios") {
+    return "http://172.28.51.237:8080/api"; // iOS - 컴퓨터의 실제 IP
   } else {
-    return 'http://localhost:8080/api'; // 웹
+    return "http://localhost:8080/api"; // 웹
   }
 };
 
@@ -64,21 +72,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      const token = await AsyncStorage.getItem('authToken');
-      const userData = await AsyncStorage.getItem('userData');
+      const token = await AsyncStorage.getItem("authToken");
+      const userData = await AsyncStorage.getItem("userData");
 
       if (token && userData) {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
 
         // Set default axios header
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
         // 앱이 다시 시작될 때 위치 추적 복원
         await locationService.restoreLocationTracking();
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error("Error checking auth status:", error);
       await clearAuthData();
     } finally {
       setIsLoading(false);
@@ -87,11 +95,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearAuthData = async () => {
     try {
-      await AsyncStorage.multiRemove(['authToken', 'userData']);
-      delete axios.defaults.headers.common['Authorization'];
+      await AsyncStorage.multiRemove(["authToken", "userData"]);
+      delete axios.defaults.headers.common["Authorization"];
       setUser(null);
     } catch (error) {
-      console.error('Error clearing auth data:', error);
+      console.error("Error clearing auth data:", error);
     }
   };
 
@@ -112,30 +120,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: driverData.name,
           email: driverData.email,
           phone: driverData.phoneNumber,
-          role: 'driver',
+          role: "driver",
           licenseNumber: driverData.licenseNumber,
           vehicleType: driverData.vehicleType,
           vehicleNumber: driverData.vehicleNumber,
-          status: driverData.status || 'OFFLINE',
+          status: driverData.status || "OFFLINE",
           currentLatitude: driverData.currentLatitude,
           currentLongitude: driverData.currentLongitude,
           phoneNumber: driverData.phoneNumber,
           lastLocationUpdate: driverData.lastLocationUpdate,
-          createdAt: driverData.createdAt
+          createdAt: driverData.createdAt,
         };
 
         // JWT 토큰은 응답에서 받아야 함
-        const token = driverResponse.data.token || `driver_token_${driverData.id}_${Date.now()}`;
+        const token =
+          driverResponse.data.token ||
+          `driver_token_${driverData.id}_${Date.now()}`;
 
-        await AsyncStorage.setItem('authToken', token);
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        await AsyncStorage.setItem("authToken", token);
+        await AsyncStorage.setItem("userData", JSON.stringify(userData));
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
         setUser(userData);
 
         // 로그인 후 자동으로 ONLINE 상태로 변경
-        if (userData.status === 'OFFLINE') {
-          await updateDriverStatus('ONLINE');
+        if (userData.status === "OFFLINE") {
+          await updateDriverStatus("ONLINE");
         }
 
         return true;
@@ -151,17 +161,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData: User = {
           id: userId || 0,
           userId: userId || 0,
-          name: name || email.split('@')[0],
+          name: name || email.split("@")[0],
           email: userEmail || email,
-          role: (role?.toLowerCase() as 'user' | 'driver' | 'admin') || 'user',
-          status: 'OFFLINE'
+          role: (role?.toLowerCase() as "user" | "driver" | "admin") || "user",
+          status: "OFFLINE",
         };
 
         // 토큰과 사용자 정보 저장
         const authToken = token || `user_token_${userId}_${Date.now()}`;
-        await AsyncStorage.setItem('authToken', authToken);
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        await AsyncStorage.setItem("authToken", authToken);
+        await AsyncStorage.setItem("userData", JSON.stringify(userData));
+        axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
 
         setUser(userData);
         return true;
@@ -169,13 +179,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return false;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
-
 
   const logout = async (): Promise<void> => {
     try {
@@ -186,7 +195,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       await clearAuthData();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -198,25 +207,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setIsLoading(true);
 
-      const response = await axios.put(`${API_BASE_URL}/users/${user.userId}`, userData);
+      const response = await axios.put(
+        `${API_BASE_URL}/users/${user.userId}`,
+        userData
+      );
 
       if (response.data && response.data.success) {
         const updatedUser = { ...user, ...userData };
-        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+        await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
         setUser(updatedUser);
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error("Update profile error:", error);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const updateDriverStatus = async (status: 'ONLINE' | 'OFFLINE' | 'BUSY' | 'BREAK'): Promise<boolean> => {
+  const updateDriverStatus = async (
+    status: "ONLINE" | "OFFLINE" | "BUSY" | "BREAK"
+  ): Promise<boolean> => {
     try {
       if (!user) return false;
 
@@ -226,14 +240,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.success) {
         const updatedUser = { ...user, status };
-        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+        await AsyncStorage.setItem("userData", JSON.stringify(updatedUser));
         setUser(updatedUser);
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('Update driver status error:', error);
+      console.error("Update driver status error:", error);
       return false;
     } finally {
       setIsLoading(false);
@@ -263,14 +277,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           lastLocationUpdate: driverData.lastLocationUpdate,
         };
 
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
+        await AsyncStorage.setItem("userData", JSON.stringify(userData));
         setUser(userData);
         return true;
       }
 
       return false;
     } catch (error) {
-      console.error('Refresh profile error:', error);
+      console.error("Refresh profile error:", error);
       return false;
     }
   };
@@ -282,7 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const success = await locationService.startLocationTracking(user.id);
       return success;
     } catch (error) {
-      console.error('Start location tracking error:', error);
+      console.error("Start location tracking error:", error);
       return false;
     }
   };
@@ -291,16 +305,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await locationService.stopLocationTracking();
     } catch (error) {
-      console.error('Stop location tracking error:', error);
+      console.error("Stop location tracking error:", error);
     }
   };
 
-  const kakaoLogin = async (kakaoEmail: string, kakaoName: string): Promise<boolean> => {
+  const kakaoLogin = async (
+    kakaoEmail: string,
+    kakaoName: string
+  ): Promise<boolean> => {
     try {
       setIsLoading(true);
 
       // authService를 통해 카카오 로그인/회원가입 처리
-      const response = await authService.kakaoLoginOrRegister(kakaoEmail, kakaoName);
+      const response = await authService.kakaoLoginOrRegister(
+        kakaoEmail,
+        kakaoName
+      );
 
       if (response.success && response.data) {
         const { token, userId, email, name, role } = response.data;
@@ -311,15 +331,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userId: userId || 0,
           name: name || kakaoName,
           email: email || kakaoEmail,
-          role: (role?.toLowerCase() as 'user' | 'driver' | 'admin') || 'user',
-          status: 'OFFLINE'
+          role: (role?.toLowerCase() as "user" | "driver" | "admin") || "user",
+          status: "OFFLINE",
         };
 
         // 토큰과 사용자 정보 저장
         const authToken = token || `user_token_${userId}_${Date.now()}`;
-        await AsyncStorage.setItem('authToken', authToken);
-        await AsyncStorage.setItem('userData', JSON.stringify(userData));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+        await AsyncStorage.setItem("authToken", authToken);
+        await AsyncStorage.setItem("userData", JSON.stringify(userData));
+        axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
 
         setUser(userData);
         return true;
@@ -327,7 +347,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return false;
     } catch (error) {
-      console.error('Kakao login error:', error);
+      console.error("Kakao login error:", error);
       return false;
     } finally {
       setIsLoading(false);
@@ -349,20 +369,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshProfile,
     startLocationTracking,
     stopLocationTracking,
-    isLocationTrackingActive
+    isLocationTrackingActive,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

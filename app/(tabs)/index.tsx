@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Alert, Animated } from 'react-native';
+import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -10,7 +11,7 @@ import { DeliveryResponse, DeliveryStatus } from '@/services/deliveryService';
 
 export default function DeliveryListScreen() {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, updateDriverStatus } = useAuth();
   const {
     availableDeliveries,
     isLoading,
@@ -20,8 +21,18 @@ export default function DeliveryListScreen() {
     refreshDeliveries
   } = useDelivery();
 
+  // 안전 수칙 체크 상태
+  const [safetyChecks, setSafetyChecks] = useState({
+    vehicleCheck: false,
+    safetyGearCheck: false,
+    routeCheck: false,
+  });
+
+  const [isClockingIn, setIsClockingIn] = useState(false);
+  const [translateX] = useState(new Animated.Value(0));
+
   useEffect(() => {
-    if (user) {
+    if (user && user.status === 'ONLINE') {
       fetchAvailableDeliveries();
     }
   }, [user, fetchAvailableDeliveries]);
@@ -99,6 +110,80 @@ export default function DeliveryListScreen() {
     return `고객 #${delivery.id}`;
   };
 
+  // 안전 수칙 토글
+  const toggleSafetyCheck = (key: keyof typeof safetyChecks) => {
+    setSafetyChecks(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  // 모든 안전 수칙 확인 여부
+  const allSafetyChecksComplete = Object.values(safetyChecks).every(check => check);
+
+  // 스와이프 트랙 너비 - 패딩 - 버튼 너비 = 최대 슬라이드 거리
+  // 대략 화면 너비(390) - paddingHorizontal(40) - track padding(20) - button width(100) - safe margin(20) = 210
+  const maxSlideDistance = 210;
+  const threshold = 170; // 출근 처리 임계값
+
+  const onGestureEvent = Animated.event(
+    [{ nativeEvent: { translationX: translateX } }],
+    { useNativeDriver: true }
+  );
+
+  const onHandlerStateChange = (event: any) => {
+    if (event.nativeEvent.state === State.END) {
+      const { translationX: tx } = event.nativeEvent;
+
+      // threshold 이상 밀면 출근 처리
+      if (tx > threshold && allSafetyChecksComplete && !isClockingIn) {
+        handleClockIn();
+      } else {
+        // 원위치로 돌아가기
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    }
+  };
+
+  const handleClockIn = async () => {
+    setIsClockingIn(true);
+
+    try {
+      const success = await updateDriverStatus('ONLINE');
+
+      if (success) {
+        // 애니메이션 완료 후 리셋
+        Animated.timing(translateX, {
+          toValue: maxSlideDistance,
+          duration: 200,
+          useNativeDriver: true,
+        }).start(() => {
+          translateX.setValue(0);
+          setSafetyChecks({
+            vehicleCheck: false,
+            safetyGearCheck: false,
+            routeCheck: false,
+          });
+          Alert.alert('출근 완료', '안전운전 하세요!');
+        });
+      } else {
+        Alert.alert('오류', '출근 처리에 실패했습니다.');
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    } catch (error) {
+      Alert.alert('오류', '네트워크 오류가 발생했습니다.');
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    } finally {
+      setIsClockingIn(false);
+    }
+  };
+
   // 로그인되지 않은 경우
   if (!user) {
     return (
@@ -116,6 +201,108 @@ export default function DeliveryListScreen() {
     );
   }
 
+  // 오프라인 상태 - 출근하기 화면
+  if (user.status === 'OFFLINE') {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
+          <View style={styles.clockInWrapper}>
+            {/* 환영 메시지 */}
+            <View style={styles.welcomeHeader}>
+              <Text style={styles.welcomeTitle}>안녕하세요, {user.name}님</Text>
+              <Text style={styles.welcomeSubtitle}>오늘도 안전운행 부탁드립니다</Text>
+            </View>
+
+            {/* 하단 고정 영역 */}
+            <View style={styles.bottomFixedArea}>
+              {/* 안전 수칙 체크리스트 */}
+              <View style={styles.safetyChecklist}>
+                <Text style={styles.checklistTitle}>안전 수칙 확인</Text>
+
+                <TouchableOpacity
+                  style={styles.checkItem}
+                  onPress={() => toggleSafetyCheck('vehicleCheck')}
+                >
+                  <View style={[styles.checkbox, safetyChecks.vehicleCheck && styles.checkboxChecked]}>
+                    {safetyChecks.vehicleCheck && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>차량 점검 완료 (타이어, 브레이크 등)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.checkItem}
+                  onPress={() => toggleSafetyCheck('safetyGearCheck')}
+                >
+                  <View style={[styles.checkbox, safetyChecks.safetyGearCheck && styles.checkboxChecked]}>
+                    {safetyChecks.safetyGearCheck && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>안전 장비 착용 (헬멧, 보호대 등)</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.checkItem}
+                  onPress={() => toggleSafetyCheck('routeCheck')}
+                >
+                  <View style={[styles.checkbox, safetyChecks.routeCheck && styles.checkboxChecked]}>
+                    {safetyChecks.routeCheck && <Text style={styles.checkmark}>✓</Text>}
+                  </View>
+                  <Text style={styles.checkLabel}>교통법규 준수 및 안전운전 서약</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* 스와이프 출근 */}
+              <View style={styles.swipeContainer}>
+                <View style={styles.swipeTrack}>
+                  <Text style={[
+                    styles.swipeText,
+                    !allSafetyChecksComplete && styles.swipeTextDisabled
+                  ]}>
+                    {!allSafetyChecksComplete ? '안전 수칙을 먼저 확인해주세요' : '밀어서 출근하기 →'}
+                  </Text>
+
+                  {allSafetyChecksComplete && !isClockingIn && (
+                    <PanGestureHandler
+                      onGestureEvent={onGestureEvent}
+                      onHandlerStateChange={onHandlerStateChange}
+                      enabled={allSafetyChecksComplete && !isClockingIn}
+                    >
+                      <Animated.View
+                        style={[
+                          styles.swipeButton,
+                          {
+                            transform: [
+                              {
+                                translateX: translateX.interpolate({
+                                  inputRange: [0, maxSlideDistance],
+                                  outputRange: [0, maxSlideDistance],
+                                  extrapolate: 'clamp',
+                                }),
+                              },
+                            ],
+                          },
+                        ]}
+                      >
+                        <Text style={styles.swipeButtonText}>→</Text>
+                      </Animated.View>
+                    </PanGestureHandler>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {isClockingIn && (
+              <View style={styles.loadingOverlay}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+                <Text style={styles.loadingText}>출근 처리 중...</Text>
+              </View>
+            )}
+          </View>
+        </ThemedView>
+      </GestureHandlerRootView>
+    );
+  }
+
+  // 온라인 상태 - 배달 목록
   return (
     <ThemedView style={[styles.container, { paddingTop: insets.top }]}>
       <View style={styles.header}>
@@ -374,5 +561,124 @@ const styles = StyleSheet.create({
     color: '#CCCCCC',
     fontSize: 16,
     fontWeight: '500',
+  },
+  // 출근 화면 스타일
+  clockInWrapper: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  welcomeHeader: {
+    paddingTop: 60,
+    paddingHorizontal: 24,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: '#AAAAAA',
+  },
+  bottomFixedArea: {
+    paddingBottom: 40,
+  },
+  safetyChecklist: {
+    paddingHorizontal: 24,
+    marginBottom: 24,
+  },
+  checklistTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 20,
+  },
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#444444',
+    backgroundColor: '#1A1A1A',
+    marginRight: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
+  },
+  checkmark: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#000000',
+  },
+  checkLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: '#DDDDDD',
+    lineHeight: 22,
+  },
+  swipeContainer: {
+    paddingHorizontal: 20,
+  },
+  swipeTrack: {
+    height: 70,
+    backgroundColor: '#1A1A1A',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#2A2A2A',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    position: 'relative',
+  },
+  swipeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    paddingLeft: 80,
+  },
+  swipeTextDisabled: {
+    fontSize: 15,
+    color: '#666666',
+    paddingLeft: 0,
+  },
+  swipeButton: {
+    position: 'absolute',
+    left: 6,
+    top: 6,
+    width: 100,
+    height: 58,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  swipeButtonText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
