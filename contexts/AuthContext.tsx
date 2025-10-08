@@ -34,7 +34,6 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  kakaoLogin: (kakaoEmail: string, kakaoName: string) => Promise<boolean>;
   logout: () => Promise<void>;
   updateProfile: (userData: Partial<User>) => Promise<boolean>;
   updateDriverStatus: (
@@ -53,7 +52,7 @@ const getApiBaseUrl = () => {
   if (Platform.OS === "android") {
     return "http://10.0.2.2:8080/api"; // Android 에뮬레이터
   } else if (Platform.OS === "ios") {
-    return "http://172.28.51.237:8080/api"; // iOS - 컴퓨터의 실제 IP
+    return "http://172.28.51.234:8080/api"; // iOS - 컴퓨터의 실제 IP
   } else {
     return "http://localhost:8080/api"; // 웹
   }
@@ -309,51 +308,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const kakaoLogin = async (
-    kakaoEmail: string,
-    kakaoName: string
-  ): Promise<boolean> => {
-    try {
-      setIsLoading(true);
-
-      // authService를 통해 카카오 로그인/회원가입 처리
-      const response = await authService.kakaoLoginOrRegister(
-        kakaoEmail,
-        kakaoName
-      );
-
-      if (response.success && response.data) {
-        const { token, userId, email, name, role } = response.data;
-
-        // User 객체 생성
-        const userData: User = {
-          id: userId || 0,
-          userId: userId || 0,
-          name: name || kakaoName,
-          email: email || kakaoEmail,
-          role: (role?.toLowerCase() as "user" | "driver" | "admin") || "user",
-          status: "OFFLINE",
-        };
-
-        // 토큰과 사용자 정보 저장
-        const authToken = token || `user_token_${userId}_${Date.now()}`;
-        await AsyncStorage.setItem("authToken", authToken);
-        await AsyncStorage.setItem("userData", JSON.stringify(userData));
-        axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
-
-        setUser(userData);
-        return true;
-      }
-
-      return false;
-    } catch (error) {
-      console.error("Kakao login error:", error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const isLocationTrackingActive = (): boolean => {
     return locationService.isLocationTrackingActive();
   };
@@ -362,7 +316,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     isLoading,
     login,
-    kakaoLogin,
     logout,
     updateProfile,
     updateDriverStatus,

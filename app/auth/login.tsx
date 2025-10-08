@@ -8,91 +8,61 @@ import {
   Dimensions,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// 카카오 SDK는 Expo Go에서 작동하지 않으므로 타입만 임포트
-let KakaoLogins: any = null;
-try {
-  KakaoLogins = require('@react-native-seoul/kakao-login').default;
-} catch (error) {
-  console.log('Kakao SDK not available in Expo Go');
-}
-
 export default function LoginScreen() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, kakaoLogin } = useAuth();
+  const { login } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = Dimensions.get('window');
 
-  const handleKakaoLogin = async () => {
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleLogin = async () => {
+    // 입력값 검증
+    if (!email.trim()) {
+      Alert.alert('입력 오류', '이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      Alert.alert('입력 오류', '올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert('입력 오류', '비밀번호를 입력해주세요.');
+      return;
+    }
+
     try {
       setIsLoading(true);
+      const success = await login(email.trim(), password);
 
-      // Expo Go에서는 카카오 SDK를 사용할 수 없으므로 체크
-      if (!KakaoLogins || typeof KakaoLogins.login !== 'function') {
-        Alert.alert(
-          '카카오 로그인 사용 불가',
-          'Expo Go에서는 카카오 로그인을 사용할 수 없습니다.\n\n개발 빌드(npx expo run:android 또는 npx expo run:ios)를 사용하거나, 테스트용 데모 계정을 사용해주세요.',
-          [
-            {
-              text: '확인',
-              style: 'default'
-            }
-          ]
-        );
-        setIsLoading(false);
-        return;
-      }
-
-      // 카카오 로그인 SDK 호출
-      const loginResult = await KakaoLogins.login();
-
-      if (loginResult) {
-        // 카카오 프로필 정보 가져오기
-        const profile = await KakaoLogins.getProfile();
-
-        if (profile && profile.email) {
-          // 서버에 카카오 이메일과 이름으로 로그인/회원가입 처리
-          const success = await kakaoLogin(
-            profile.email,
-            profile.nickname || profile.email.split('@')[0]
-          );
-
-          if (success) {
-            router.replace('/(tabs)');
-          } else {
-            Alert.alert('로그인 실패', '카카오 로그인 처리 중 오류가 발생했습니다.');
-          }
-        } else {
-          Alert.alert('로그인 실패', '카카오 계정 이메일 정보가 필요합니다.');
-        }
+      if (success) {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');
       }
     } catch (error) {
-      console.error('카카오 로그인 오류:', error);
-      Alert.alert('오류', '카카오 로그인 중 오류가 발생했습니다.');
+      console.error('로그인 오류:', error);
+      Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDemoLogin = async () => {
-    try {
-      setIsLoading(true);
-      // 서버 DB의 실제 테스트 계정 사용
-      const success = await login('del@del.com', 'qqqq1111');
-      if (success) {
-        router.replace('/(tabs)');
-      } else {
-        Alert.alert('로그인 실패', '데모 로그인 중 오류가 발생했습니다.');
-      }
-    } catch (error) {
-      Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
+  const handleGoToRegister = () => {
+    router.push('/auth/register');
   };
 
   return (
@@ -107,33 +77,61 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>배달 관리 시스템</Text>
         </View>
 
-        {/* Login Buttons */}
-        <View style={styles.buttonSection}>
-          <TouchableOpacity
-            style={[styles.kakaoButton, isLoading && styles.disabledButton]}
-            onPress={handleKakaoLogin}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#000000" />
-            ) : (
-              <>
-                <Text style={styles.kakaoIcon}>💬</Text>
-                <Text style={styles.kakaoButtonText}>카카오톡으로 시작하기</Text>
-              </>
-            )}
-          </TouchableOpacity>
+        {/* Login Form */}
+        <View style={styles.formSection}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>이메일</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="이메일을 입력하세요"
+              placeholderTextColor="#666666"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              editable={!isLoading}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>비밀번호</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호를 입력하세요"
+              placeholderTextColor="#666666"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              editable={!isLoading}
+            />
+          </View>
 
           <TouchableOpacity
-            style={[styles.demoButton, isLoading && styles.disabledButton]}
-            onPress={handleDemoLogin}
+            style={[styles.loginButton, isLoading && styles.disabledButton]}
+            onPress={handleLogin}
             disabled={isLoading}
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.demoButtonText}>데모 계정으로 체험하기</Text>
+              <Text style={styles.loginButtonText}>로그인</Text>
             )}
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>또는</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.registerButton, isLoading && styles.disabledButton]}
+            onPress={handleGoToRegister}
+            disabled={isLoading}
+          >
+            <Text style={styles.registerButtonText}>회원가입</Text>
           </TouchableOpacity>
         </View>
 
@@ -164,7 +162,7 @@ const styles = StyleSheet.create({
   },
   headerSection: {
     alignItems: 'center',
-    marginTop: 80,
+    marginTop: 60,
     marginBottom: 40,
   },
   logoText: {
@@ -184,35 +182,64 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '400',
   },
-  buttonSection: {
-    gap: 16,
+  formSection: {
+    gap: 20,
   },
-  kakaoButton: {
-    backgroundColor: '#FEE500',
+  inputGroup: {
+    gap: 8,
+  },
+  label: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: '#2A2A2A',
     borderRadius: 12,
-    paddingVertical: 20,
-    flexDirection: 'row',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#333333',
+  },
+  loginButton: {
+    backgroundColor: '#007AFF',
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
+    marginTop: 12,
   },
-  kakaoIcon: {
-    fontSize: 20,
-  },
-  kakaoButtonText: {
-    color: '#000000',
+  loginButtonText: {
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '600',
   },
-  demoButton: {
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#333333',
+  },
+  dividerText: {
+    color: '#666666',
+    fontSize: 14,
+    paddingHorizontal: 16,
+  },
+  registerButton: {
     backgroundColor: 'transparent',
     borderRadius: 12,
-    paddingVertical: 20,
+    paddingVertical: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#333333',
   },
-  demoButtonText: {
+  registerButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '500',

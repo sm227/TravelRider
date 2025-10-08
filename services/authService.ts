@@ -57,53 +57,7 @@ export const login = async (data: LoginRequest): Promise<ApiResponse<LoginRespon
   }
 };
 
-// 카카오 로그인/회원가입 통합 함수
-export const kakaoLoginOrRegister = async (
-  kakaoEmail: string,
-  kakaoName: string
-): Promise<ApiResponse<LoginResponse>> => {
-  // 카카오 이메일로 고정 비밀번호 생성 (실제로는 서버에서 소셜 로그인 처리 권장)
-  const kakaoPassword = `kakao_${kakaoEmail}_secure`;
-
-  // 1. 로그인 시도
-  const loginResult = await login({
-    email: kakaoEmail,
-    password: kakaoPassword
-  });
-
-  // 로그인 성공 시 반환
-  if (loginResult.success) {
-    return loginResult;
-  }
-
-  // 2. 로그인 실패 시 회원가입 시도
-  const registerResult = await register({
-    name: kakaoName,
-    email: kakaoEmail,
-    password: kakaoPassword,
-    role: 'USER'
-  });
-
-  // 회원가입 실패 시 반환
-  if (!registerResult.success) {
-    return {
-      success: false,
-      message: registerResult.message,
-      data: {} as LoginResponse
-    };
-  }
-
-  // 3. 회원가입 성공 후 재로그인
-  const reLoginResult = await login({
-    email: kakaoEmail,
-    password: kakaoPassword
-  });
-
-  return reLoginResult;
-};
-
 export const authService = {
   register,
-  login,
-  kakaoLoginOrRegister
+  login
 };
