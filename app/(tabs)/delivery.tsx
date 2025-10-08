@@ -446,18 +446,16 @@ export default function DeliveryProgressScreen() {
 
         {/* Progress Indicator */}
         <View style={styles.progressContainer}>
-          <View style={styles.progressStep}>
-            <View style={[styles.stepCircle, currentStep >= 1 ? styles.activeStep : styles.inactiveStep]}>
-              <Text style={[styles.stepText, currentStep >= 1 ? styles.activeStepText : styles.inactiveStepText]}>1</Text>
+          <View style={styles.progressSteps}>
+            <View style={[styles.stepBadge, currentStep >= 1 && styles.stepBadgeActive]}>
+              <Text style={[styles.stepBadgeText, currentStep >= 1 && styles.stepBadgeTextActive]}>1. 픽업</Text>
             </View>
-            <Text style={styles.stepLabel}>픽업</Text>
-          </View>
-          <View style={[styles.progressLine, currentStep >= 2 ? styles.activeLine : styles.inactiveLine]} />
-          <View style={styles.progressStep}>
-            <View style={[styles.stepCircle, currentStep >= 2 ? styles.activeStep : styles.inactiveStep]}>
-              <Text style={[styles.stepText, currentStep >= 2 ? styles.activeStepText : styles.inactiveStepText]}>2</Text>
+            <View style={styles.stepArrow}>
+              <Text style={styles.stepArrowText}>→</Text>
             </View>
-            <Text style={styles.stepLabel}>배송</Text>
+            <View style={[styles.stepBadge, currentStep >= 2 && styles.stepBadgeActive]}>
+              <Text style={[styles.stepBadgeText, currentStep >= 2 && styles.stepBadgeTextActive]}>2. 배송</Text>
+            </View>
           </View>
         </View>
 
@@ -569,53 +567,42 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   progressContainer: {
+    paddingVertical: 16,
+    marginBottom: 12,
+  },
+  progressSteps: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 24,
-    marginBottom: 16,
-  },
-  progressStep: {
     alignItems: 'center',
+    gap: 12,
   },
-  stepCircle: {
-    width: 40,
-    height: 40,
+  stepBadge: {
+    backgroundColor: '#2A2A2A',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#333333',
   },
-  activeStep: {
+  stepBadgeActive: {
     backgroundColor: '#FFFFFF',
+    borderColor: '#FFFFFF',
   },
-  inactiveStep: {
-    backgroundColor: '#333333',
+  stepBadgeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666666',
   },
-  stepText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  activeStepText: {
+  stepBadgeTextActive: {
     color: '#000000',
   },
-  inactiveStepText: {
-    color: '#CCCCCC',
+  stepArrow: {
+    paddingHorizontal: 8,
   },
-  stepLabel: {
-    fontSize: 12,
-    color: '#CCCCCC',
-  },
-  progressLine: {
-    height: 2,
-    flex: 1,
-    marginHorizontal: 16,
-  },
-  activeLine: {
-    backgroundColor: '#FFFFFF',
-  },
-  inactiveLine: {
-    backgroundColor: '#333333',
+  stepArrowText: {
+    fontSize: 18,
+    color: '#555555',
+    fontWeight: '300',
   },
   infoCard: {
     backgroundColor: '#111111',

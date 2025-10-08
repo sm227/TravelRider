@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // 플랫폼별 API URL 설정
 const getApiBaseUrl = () => {
   if (Platform.OS === 'android') {
-    return 'http://10.0.2.2:8080/api'; // Android 에뮬레이터
+    return 'http://1.236.13.63:8888/api'; // Android 에뮬레이터
   } else if (Platform.OS === 'ios') {
     return 'http://1.236.13.63:8888/api'; // iOS - 컴퓨터의 실제 IP
   } else {

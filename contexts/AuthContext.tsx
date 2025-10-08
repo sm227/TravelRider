@@ -50,9 +50,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // 플랫폼별 API URL 설정
 const getApiBaseUrl = () => {
   if (Platform.OS === "android") {
-    return "http://10.0.2.2:8080/api"; // Android 에뮬레이터
+    return "http://1.236.13.63:8888/api"; // Android 에뮬레이터
   } else if (Platform.OS === "ios") {
-    return "http://172.28.51.234:8080/api"; // iOS - 컴퓨터의 실제 IP
+    return "http://1.236.13.63:8888/api"; // iOS - 컴퓨터의 실제 IP
   } else {
     return "http://localhost:8080/api"; // 웹
   }
