@@ -52,7 +52,7 @@ const getApiBaseUrl = () => {
   if (Platform.OS === "android") {
     return "http://1.236.13.63:8888/api"; // Android 에뮬레이터
   } else if (Platform.OS === "ios") {
-    return "http://1.236.13.63:8888/api"; // iOS - 컴퓨터의 실제 IP
+    return "http://192.168.55.90:8080/api"; // iOS - 컴퓨터의 실제 IP
   } else {
     return "http://localhost:8080/api"; // 웹
   }
@@ -71,15 +71,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       setIsLoading(true);
-      const token = await AsyncStorage.getItem("authToken");
+      const accessToken = await AsyncStorage.getItem("accessToken");
       const userData = await AsyncStorage.getItem("userData");
 
-      if (token && userData) {
+      if (accessToken && userData) {
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
 
         // Set default axios header
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        axios.defaults.headers.common["Authorization"] = `Bearer ${accessToken}`;
 
         // 앱이 다시 시작될 때 위치 추적 복원
         await locationService.restoreLocationTracking();
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const clearAuthData = async () => {
     try {
-      await AsyncStorage.multiRemove(["authToken", "userData"]);
+      await AsyncStorage.multiRemove(["accessToken", "refreshToken", "userData"]);
       delete axios.defaults.headers.common["Authorization"];
       setUser(null);
     } catch (error) {
@@ -106,39 +106,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
 
-      // 배달원 로그인 API 시도
-      const driverResponse = await driverService.login({ email, password });
+      // API 가이드에 따른 라이더 로그인
+      const response = await authService.riderLogin({ email, password });
 
-      if (driverResponse.success && driverResponse.data) {
-        const driverData = driverResponse.data;
+      if (response.success && response.data) {
+        const riderData = response.data;
 
-        // DriverResponse를 User 형태로 매핑
+        // RiderLoginResponse를 User 형태로 매핑
         const userData: User = {
-          id: driverData.id,
-          userId: driverData.userId,
-          name: driverData.name,
-          email: driverData.email,
-          phone: driverData.phoneNumber,
+          id: riderData.driverId,
+          userId: riderData.userId,
+          name: riderData.name,
+          email: riderData.email,
+          phone: riderData.phoneNumber,
+          phoneNumber: riderData.phoneNumber,
           role: "driver",
-          licenseNumber: driverData.licenseNumber,
-          vehicleType: driverData.vehicleType,
-          vehicleNumber: driverData.vehicleNumber,
-          status: driverData.status || "OFFLINE",
-          currentLatitude: driverData.currentLatitude,
-          currentLongitude: driverData.currentLongitude,
-          phoneNumber: driverData.phoneNumber,
-          lastLocationUpdate: driverData.lastLocationUpdate,
-          createdAt: driverData.createdAt,
+          vehicleNumber: riderData.vehicleNumber,
+          status: riderData.driverStatus || "OFFLINE",
         };
 
-        // JWT 토큰은 응답에서 받아야 함
-        const token =
-          driverResponse.data.token ||
-          `driver_token_${driverData.id}_${Date.now()}`;
-
-        await AsyncStorage.setItem("authToken", token);
+        // API 가이드에 따른 토큰 저장 (accessToken, refreshToken)
+        await AsyncStorage.setItem("accessToken", riderData.accessToken);
+        await AsyncStorage.setItem("refreshToken", riderData.refreshToken);
         await AsyncStorage.setItem("userData", JSON.stringify(userData));
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+
+        // axios 헤더 설정
+        axios.defaults.headers.common["Authorization"] = `Bearer ${riderData.accessToken}`;
 
         setUser(userData);
 
@@ -147,32 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await updateDriverStatus("ONLINE");
         }
 
-        return true;
-      }
-
-      // 배달원 로그인 실패 시, 일반 사용자 로그인 시도 (fallback)
-      const response = await authService.login({ email, password });
-
-      if (response.success && response.data) {
-        const { token, userId, email: userEmail, name, role } = response.data;
-
-        // User 객체 생성
-        const userData: User = {
-          id: userId || 0,
-          userId: userId || 0,
-          name: name || email.split("@")[0],
-          email: userEmail || email,
-          role: (role?.toLowerCase() as "user" | "driver" | "admin") || "user",
-          status: "OFFLINE",
-        };
-
-        // 토큰과 사용자 정보 저장
-        const authToken = token || `user_token_${userId}_${Date.now()}`;
-        await AsyncStorage.setItem("authToken", authToken);
-        await AsyncStorage.setItem("userData", JSON.stringify(userData));
-        axios.defaults.headers.common["Authorization"] = `Bearer ${authToken}`;
-
-        setUser(userData);
         return true;
       }
 

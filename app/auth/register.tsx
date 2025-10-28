@@ -32,7 +32,9 @@ export default function RegisterScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState<UserRole>('USER');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [role, setRole] = useState<UserRole>('DRIVER'); // 라이더 앱이므로 기본값 DRIVER
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -85,6 +87,14 @@ export default function RegisterScreen() {
         Alert.alert('입력 오류', '이름을 입력해주세요.');
         return;
       }
+      if (!phone.trim()) {
+        Alert.alert('입력 오류', '전화번호를 입력해주세요.');
+        return;
+      }
+      if (!vehicleNumber.trim()) {
+        Alert.alert('입력 오류', '차량번호를 입력해주세요.');
+        return;
+      }
       setCurrentStep(4);
     }
   };
@@ -99,29 +109,26 @@ export default function RegisterScreen() {
     try {
       setIsLoading(true);
 
-      // API 호출
-      const response = await authService.register({
+      // 라이더 회원가입 API 호출
+      const response = await authService.riderRegister({
         name: name.trim(),
         email: email.trim(),
         password,
-        role,
+        phoneNumber: phone.trim(),
+        vehicleNumber: vehicleNumber.trim(),
+        licenseNumber: licenseNumber.trim() || undefined,
       });
 
       if (response.success) {
         Alert.alert(
-          '회원가입 완료',
-          '회원가입이 완료되었습니다. 로그인을 진행합니다.',
+          '회원가입 신청 완료',
+          '회원가입 신청이 완료되었습니다.\n관리자의 승인 후 로그인이 가능합니다.',
           [
             {
               text: '확인',
-              onPress: async () => {
-                // 자동 로그인
-                const loginSuccess = await login(email.trim(), password);
-                if (loginSuccess) {
-                  router.replace('/(tabs)');
-                } else {
-                  router.replace('/auth/login');
-                }
+              onPress: () => {
+                // 승인 대기 상태이므로 로그인 화면으로 이동
+                router.replace('/auth/login');
               },
             },
           ]
@@ -262,8 +269,8 @@ export default function RegisterScreen() {
 
   const renderStep3 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>개인정보를 입력하세요</Text>
-      <Text style={styles.stepSubtitle}>서비스 이용을 위한 기본 정보입니다</Text>
+      <Text style={styles.stepTitle}>라이더 정보를 입력하세요</Text>
+      <Text style={styles.stepSubtitle}>배달 서비스 이용을 위한 라이더 정보입니다</Text>
 
       <View style={styles.inputGroup}>
         <Text style={styles.label}>이름</Text>
@@ -280,7 +287,7 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>전화번호 (선택)</Text>
+        <Text style={styles.label}>전화번호</Text>
         <TextInput
           style={styles.input}
           placeholder="010-1234-5678"
@@ -293,27 +300,28 @@ export default function RegisterScreen() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>역할 선택</Text>
-        <View style={styles.roleContainer}>
-          <TouchableOpacity
-            style={[styles.roleButton, role === 'USER' && styles.roleButtonActive]}
-            onPress={() => setRole('USER')}
-            disabled={isLoading}
-          >
-            <Text style={[styles.roleButtonText, role === 'USER' && styles.roleButtonTextActive]}>
-              일반 사용자
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.roleButton, role === 'DRIVER' && styles.roleButtonActive]}
-            onPress={() => setRole('DRIVER')}
-            disabled={isLoading}
-          >
-            <Text style={[styles.roleButtonText, role === 'DRIVER' && styles.roleButtonTextActive]}>
-              배달기사
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.label}>차량번호</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="12가3456"
+          placeholderTextColor="#666666"
+          value={vehicleNumber}
+          onChangeText={setVehicleNumber}
+          autoCapitalize="characters"
+          editable={!isLoading}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>운전면허번호 (선택)</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="11-12-345678-90"
+          placeholderTextColor="#666666"
+          value={licenseNumber}
+          onChangeText={setLicenseNumber}
+          editable={!isLoading}
+        />
       </View>
 
       <TouchableOpacity
@@ -329,7 +337,7 @@ export default function RegisterScreen() {
   const renderStep4 = () => (
     <View style={styles.stepContainer}>
       <Text style={styles.stepTitle}>입력하신 정보를 확인해주세요</Text>
-      <Text style={styles.stepSubtitle}>정보가 올바른지 확인 후 가입을 완료하세요</Text>
+      <Text style={styles.stepSubtitle}>정보가 올바른지 확인 후 가입 신청을 완료하세요</Text>
 
       <View style={styles.confirmContainer}>
         <View style={styles.confirmRow}>
@@ -340,16 +348,30 @@ export default function RegisterScreen() {
           <Text style={styles.confirmLabel}>이름</Text>
           <Text style={styles.confirmValue}>{name}</Text>
         </View>
-        {phone && (
+        <View style={styles.confirmRow}>
+          <Text style={styles.confirmLabel}>전화번호</Text>
+          <Text style={styles.confirmValue}>{phone}</Text>
+        </View>
+        <View style={styles.confirmRow}>
+          <Text style={styles.confirmLabel}>차량번호</Text>
+          <Text style={styles.confirmValue}>{vehicleNumber}</Text>
+        </View>
+        {licenseNumber && (
           <View style={styles.confirmRow}>
-            <Text style={styles.confirmLabel}>전화번호</Text>
-            <Text style={styles.confirmValue}>{phone}</Text>
+            <Text style={styles.confirmLabel}>운전면허번호</Text>
+            <Text style={styles.confirmValue}>{licenseNumber}</Text>
           </View>
         )}
         <View style={styles.confirmRow}>
           <Text style={styles.confirmLabel}>역할</Text>
-          <Text style={styles.confirmValue}>{role === 'USER' ? '일반 사용자' : '배달기사'}</Text>
+          <Text style={styles.confirmValue}>라이더</Text>
         </View>
+      </View>
+
+      <View style={styles.infoBox}>
+        <Text style={styles.infoText}>
+          ℹ️ 관리자의 승인 후 로그인이 가능합니다.
+        </Text>
       </View>
 
       <TouchableOpacity
@@ -360,7 +382,7 @@ export default function RegisterScreen() {
         {isLoading ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.registerButtonText}>회원가입 완료</Text>
+          <Text style={styles.registerButtonText}>가입 신청하기</Text>
         )}
       </TouchableOpacity>
     </View>
@@ -604,5 +626,18 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.6,
+  },
+  infoBox: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  infoText: {
+    color: '#CCCCCC',
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
